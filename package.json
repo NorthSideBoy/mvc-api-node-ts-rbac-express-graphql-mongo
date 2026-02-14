@@ -1,0 +1,58 @@
+{
+	"name": "mvc-api-node-express-ts-mongo",
+	"version": "1.0.0",
+	"description": "RESTful API boilerplate with Node.js, Express, TypeScript, MongoDB and MVC pattern",
+	"type": "commonjs",
+	"main": "index.js",
+	"scripts": {
+		"test": "echo \"Error: no test specified\" && exit 1",
+		"dev": "concurrently 'nodemon' 'nodemon -x tsoa spec-and-routes'",
+		"format": "npx @biomejs/biome format --write",
+		"lint": "npx @biomejs/biome lint --write",
+		"check": "npx @biomejs/biome check --write",
+		"check:unsafe": "npx @biomejs/biome check --write --unsafe"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/NorthSideBoy/mvc-api-node-express-ts-mongo.git"
+	},
+	"author": "Said Lucena <saidlucena519@gmail.com> (https://github.com/NorthSideBoy)",
+	"license": "ISC",
+	"bugs": {
+		"url": "https://github.com/NorthSideBoy/mvc-api-node-express-ts-mongo/issues"
+	},
+	"homepage": "https://github.com/NorthSideBoy/mvc-api-node-express-ts-mongo#readme",
+	"dependencies": {
+		"@prisma/client": "^6.19.2",
+		"@tsoa/runtime": "^7.0.0-alpha.0",
+		"bcrypt": "^6.0.0",
+		"body-parser": "^2.2.2",
+		"cors": "^2.8.6",
+		"dotenv": "^17.3.1",
+		"express": "^5.2.1",
+		"jsonwebtoken": "^9.0.3",
+		"mongodb": "^7.1.0",
+		"pino": "^10.3.1",
+		"pino-http": "^11.0.0",
+		"swagger-ui-express": "^5.0.1",
+		"tsoa": "^7.0.0-alpha.0",
+		"zod": "^4.3.6"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.15",
+		"@types/bcrypt": "^6.0.0",
+		"@types/body-parser": "^1.19.6",
+		"@types/cors": "^2.8.19",
+		"@types/express": "^5.0.6",
+		"@types/jsonwebtoken": "^9.0.10",
+		"@types/node": "^25.2.3",
+		"@types/swagger-ui-dist": "^3.30.6",
+		"@types/swagger-ui-express": "^4.1.8",
+		"concurrently": "^9.2.1",
+		"nodemon": "^3.1.11",
+		"pino-pretty": "^11.3.0",
+		"prisma": "6.19",
+		"ts-node": "^10.9.2",
+		"typescript": "^5.9.3"
+	}
+}

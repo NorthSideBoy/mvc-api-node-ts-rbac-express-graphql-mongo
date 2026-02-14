@@ -1,0 +1,15 @@
+export enum HttpErrorCode {
+	UnprocessableEntity = "UNPROCESABLE_ENTITY",
+	BadGateway = "BAD_GATEWAY",
+	BadRequest = "BAD_REQUEST",
+	Conflict = "CONFLICT",
+	Forbbidden = "FORBIDDENT",
+	GatewayTimeout = "GATEWAY_TIMEOUT",
+	NotFound = "NOT_FOUND",
+	NotImplemented = "NOT_IMPLEMENTED",
+	ServiceUnavailable = "SERVICE_UNAVAILABLE",
+	ToManyRequest = "ToManyRequest",
+	MethodNotAllowed = "METHOD_NOT_ALLOWED",
+	Unauthorized = "UNAUTHORIZED",
+	InternalError = "INTERNAL_ERROR",
+}

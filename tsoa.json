@@ -1,0 +1,27 @@
+{
+	"entryFile": "src/server.ts",
+	"noImplicitAdditionalProperties": "throw",
+	"controllerPathGlobs": ["src/controllers/*.ts"],
+	"spec": {
+		"outputDirectory": "src/docs",
+		"specVersion": 3,
+		"basePath": "/",
+		"securityDefinitions": {
+			"Bearer": {
+				"type": "http",
+				"scheme": "bearer",
+				"bearerFormat": "JWT"
+			}
+		},
+		"security": [
+			{
+				"Bearer": []
+			}
+		]
+	},
+	"routes": {
+		"routesDir": "src/routes",
+		"middleware": "express",
+		"authenticationModule": "src/middlewares/auth.middleware.ts"
+	}
+}

@@ -1,0 +1,28 @@
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USER}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
+      - MONGO_INITDB_DATABASE=${DB_NAME}
+    volumes:
+      - ./docker/mongo-entrypoint.sh:/mongo-entrypoint.sh:ro
+    entrypoint: ["/mongo-entrypoint.sh"]
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+
+  mongo-init-rs:
+    image: mongo:6.0
+    depends_on:
+      - mongodb
+    env_file:
+      - .env
+    volumes:
+      - ./docker/rs-init.sh:/rs-init.sh:ro
+    entrypoint: ["/bin/bash", "/rs-init.sh"]
+    restart: "no"
+ 
