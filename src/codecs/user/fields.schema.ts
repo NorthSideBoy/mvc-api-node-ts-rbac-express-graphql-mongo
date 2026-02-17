@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { Role } from "../../rbac/role";
+import { UpdateRole } from "../../rbac/role";
 
 export const nameSchema = z
 	.string()
@@ -35,6 +36,8 @@ export const usernameSchema = z
 	.transform((val) => val.toLowerCase());
 
 export const roleSchema = z.enum(Role);
+
+export const updateRoleSchema = z.enum(UpdateRole);
 
 export const emailSchema = z
 	.email("Invalid email format")

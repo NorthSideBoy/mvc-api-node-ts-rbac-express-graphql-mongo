@@ -1,7 +1,7 @@
 import type { Role } from "../rbac/role";
-
+import { UpdateRole as RoleUpdate } from "../rbac/role";
 export namespace User {
-	export type Entity = {
+	export type Schema = {
 		id: string;
 		name: string;
 		lastname: string;
@@ -10,14 +10,14 @@ export namespace User {
 		email: string;
 		password: string;
 		birthday: Date;
-		enable?: boolean;
+		enable: boolean;
 		createdAt: Date;
 		updatedAt: Date;
 	};
 
-	export type Create = Omit<Entity, "id" | "createdAt" | "updatedAt">;
+	export type Create = Omit<Schema, "id" | "createdAt" | "updatedAt">;
 
-	export type Secure = Omit<Entity, "password">;
+	export type Secure = Omit<Schema, "password">;
 
 	export type Profile = Omit<Secure, "id" | "createdAt" | "updatedAt">;
 
@@ -25,9 +25,11 @@ export namespace User {
 		Pick<Create, "name" | "lastname" | "username" | "email" | "birthday">
 	>;
 
-	export type UpdateStatus = Pick<Entity, "enable">;
+	export type UpdateStatus = Pick<Schema, "enable">;
 
-	export type UpdateRole = Pick<Entity, "role">;
+	export type UpdateRole = {
+		role: RoleUpdate;
+	};
 
-	export type Env = Omit<Profile, "role" | "enable"> & Pick<Entity, "password">;
+	export type Env = Omit<Profile, "role" | "enable"> & Pick<Schema, "password">;
 }

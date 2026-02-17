@@ -3,3 +3,8 @@ export enum Role {
 	MANAGER = "MANAGER",
 	USER = "USER",
 }
+
+export enum UpdateRole {
+	MANAGER = "MANAGER",
+	USER = "USER"
+}

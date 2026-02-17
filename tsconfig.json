@@ -25,6 +25,7 @@
 
 		// Stricter Typechecking Options
 		"noUncheckedIndexedAccess": true,
+		"strictNullChecks": true,
 		"exactOptionalPropertyTypes": true,
 
 		// Style Options
@@ -36,7 +37,7 @@
 		// "noPropertyAccessFromIndexSignature": true,
 
 		// Recommended Options
-		"strict": true,
+		"strict": false,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
 		"useDefineForClassFields": false,

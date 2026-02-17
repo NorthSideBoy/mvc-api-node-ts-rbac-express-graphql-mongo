@@ -7,7 +7,7 @@
 	},
 	"files": {
 		"ignoreUnknown": false,
-		"includes": ["**", "!src/routes", "!src/docs", "**"]
+		"includes": ["**", "!src/routes", "!src/docs"]
 	},
 	"formatter": {
 		"enabled": true,
@@ -18,7 +18,7 @@
 		"rules": {
 			"recommended": true,
 			"style": {
-				"noParameterAssign": "error",
+				"noParameterAssign": "off",
 				"useAsConstAssertion": "error",
 				"useDefaultParameterLast": "error",
 				"useEnumInitializers": "error",

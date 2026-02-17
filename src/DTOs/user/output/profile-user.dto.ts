@@ -1,3 +1,3 @@
 import type { User } from "../../../types/user.type";
 
-export type UserProfileDTO = User.Profile;
+export type ProfileUser = User.Profile;

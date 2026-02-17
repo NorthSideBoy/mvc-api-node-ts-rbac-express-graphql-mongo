@@ -1,3 +1,4 @@
+import { result } from "../builders/result.builder";
 import { createUserCodec } from "../codecs/user/create-user.codec";
 import { loginUserCodec } from "../codecs/user/login-user.codec";
 import { registerUserCodec } from "../codecs/user/register-user.codec";
@@ -5,97 +6,149 @@ import { updateUserCodec } from "../codecs/user/update-user.codec";
 import { updateUserPasswordCodec } from "../codecs/user/update-user-password.codec";
 import { updateUserRoleCodec } from "../codecs/user/update-user-role.codec";
 import { updateUserStatusCodec } from "../codecs/user/update-user-status.codec";
-import type { ResultDTO } from "../DTOs/operation/output/result.dto";
-import type { UserCreateDTO } from "../DTOs/user/input/create-user.dto";
-import type { UserLoginDTO } from "../DTOs/user/input/login-user.dto";
-import type { UserRegisterDTO } from "../DTOs/user/input/register-user.dto";
-import type { UserUpdateDTO } from "../DTOs/user/input/update-user.dto";
-import type { UserUpdatePasswordDTO } from "../DTOs/user/input/update-user-password.dto";
-import type { UserUpdateRoleDTO } from "../DTOs/user/input/update-user-role.dto";
-import type { UserUpdateStatusDTO } from "../DTOs/user/input/update-user-status.dto";
-import type { UserDTO } from "../DTOs/user/output/user.dto";
-import type { UserAuthDTO } from "../DTOs/user/output/user-auth.dto";
-import { createUser } from "../use-cases/create-user.use-case";
-import { deleteUser } from "../use-cases/delete-user.use-case";
-import { findUserById } from "../use-cases/find-user-by-id.use-case";
-import { getProfile } from "../use-cases/get-profile.use-case";
-import { loginUser } from "../use-cases/login-user.use-case";
-import { registerUser } from "../use-cases/register-user.use-case";
-import { updateUser } from "../use-cases/update-user.use-case";
-import { updateUserPassword } from "../use-cases/update-user-password.use-case";
-import { updateUserRole } from "../use-cases/update-user-role.use-case";
-import { updateUserStatus } from "../use-cases/update-user-status.use-case";
+import type { Result } from "../DTOs/operation/output/result.dto";
+import type { CreateUser } from "../DTOs/user/input/create-user.dto";
+import type { LoginUser } from "../DTOs/user/input/login-user.dto";
+import type { RegisterUser } from "../DTOs/user/input/register-user.dto";
+import type { UpdateUser } from "../DTOs/user/input/update-user.dto";
+import type { UpdateUserPassword } from "../DTOs/user/input/update-user-password.dto";
+import type { UpdateUserRole } from "../DTOs/user/input/update-user-role.dto";
+import type { UpdateUserStatus } from "../DTOs/user/input/update-user-status.dto";
+import type { AuthenticatedUser } from "../DTOs/user/output/auth-user.dto";
+import type { User as DTO } from "../DTOs/user/output/user.dto";
+import { PermissionDeniedError } from "../errors/authorization/permission-denied.error";
+import { AdminAlreadyExistsError } from "../errors/user/admin-already-exists.error";
+import { DuplicatePasswordError } from "../errors/user/duplicate-password.error";
+import { EmailInUseError } from "../errors/user/email-in-use.error";
+import { InvalidUserCredentialsError } from "../errors/user/invalid-user-credentials.error";
+import { UserNotFoundError } from "../errors/user/user-not-found.error";
+import { UsernameInUseError } from "../errors/user/username-in-use.error";
+import { toAuthenticated } from "../mappers/user.mapper";
+import User from "../models/user.model";
+import { isAdminRole } from "../rbac/guard";
+import { PERMISSIONS, type Permission } from "../rbac/permissions";
+import { Role } from "../rbac/role";
+import RolePolicy from "../rbac/role-policy";
+import type { Token } from "../types/token.type";
 import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
 
 export class UserService {
-	async register(input: unknown): Promise<UserAuthDTO> {
-		const decoded = decode<UserRegisterDTO>(registerUserCodec, input);
+	private readonly policy = RolePolicy.create();
 
-		const user = await registerUser(decoded);
+	private async getByIdOrThrow(id: string) {
+		const user = await User.findById(id);
+		if (!user) throw new UserNotFoundError("User not found");
+		return user;
+	}
 
+	public async getByEmailOrThrow(email: string) {
+		const user = await User.findByEmail(email);
+		if (!user) throw new UserNotFoundError();
+		return user;
+	}
+
+	private async checkUserUniqueness(input: RegisterUser | CreateUser) {
+		const userByEmail = await User.findByEmail(input.email);
+		if (userByEmail) throw new EmailInUseError(input.email);
+		const userByUsername = await User.findByUsername(input.username);
+		if (userByUsername) throw new UsernameInUseError(input.username);
+	}
+
+	async register(input: unknown): Promise<AuthenticatedUser> {
+		const decoded = decode<RegisterUser>(registerUserCodec, input);
+		this.checkUserUniqueness(decoded)
+		const created = await User.create(decoded);
+		const token = tokenizer.sign({
+			sub: created.id,
+			username: created.username,
+			role: created.role,
+			enable: created.enable,
+		});
+		return toAuthenticated(created, token);
+	}
+
+	async login(input: unknown): Promise<AuthenticatedUser> {
+		const decoded = decode<LoginUser>(loginUserCodec, input);
+		const user = await User.findByEmail(decoded.email);
+		if (!user) throw new InvalidUserCredentialsError();
+		const isValid = await user.comparePassword(decoded.password);
+		if (!isValid) throw new InvalidUserCredentialsError();
 		const token = tokenizer.sign({
 			sub: user.id,
 			username: user.username,
 			role: user.role,
-			enable: user.enable ?? true,
+			enable: user.enable,
 		});
-
-		return { ...user, token };
+		return toAuthenticated(user, token);
 	}
 
-	async login(input: unknown): Promise<UserAuthDTO> {
-		const decoded = decode<UserLoginDTO>(loginUserCodec, input);
-
-		const user = await loginUser(decoded);
-
-		const token = tokenizer.sign({
-			sub: user.id,
-			username: user.username,
-			role: user.role,
-			enable: user.enable ?? true,
-		});
-
-		return { ...user, token };
+	async findById(id: string, actor: Token.Payload): Promise<DTO | null> {
+		const user = await User.findById(id);
+		if (!user) return null;
+		return user.secure;
 	}
 
-	async profile(userId: string): Promise<UserDTO> {
-		return getProfile(userId);
+	async create(input: unknown, actor: Token.Payload): Promise<DTO> {
+		const decoded = decode<CreateUser>(createUserCodec, input);
+		this.checkUserUniqueness(decoded)
+		if (isAdminRole(decoded.role)) {
+			const admin = await User.findOneByRole(Role.ADMIN);
+			if (admin) throw new AdminAlreadyExistsError();
+		}
+		const user = await User.create(decoded);
+		return user.secure;
 	}
 
-	async findById(userId: string): Promise<UserDTO> {
-		return findUserById(userId);
+	async update(
+		id: string,
+		input: unknown,
+		actor: Token.Payload,
+	): Promise<Result> {
+		const decoded = decode<UpdateUser>(updateUserCodec, input);
+		const operation = await User.updateOne({ _id: id }, decoded);
+		if (!operation.matchedCount) throw new UserNotFoundError();
+		return result(operation.modifiedCount);
 	}
 
-	async create(input: unknown): Promise<UserDTO> {
-		const decoded = decode<UserCreateDTO>(createUserCodec, input);
-		return createUser(decoded);
+	async updateStatus(
+		id: string,
+		input: unknown,
+		actor: Token.Payload,
+	): Promise<Result> {
+		const decoded = decode<UpdateUserStatus>(updateUserStatusCodec, input);
+		const operation = await User.updateOne({ _id: id }, decoded);
+		if (!operation.matchedCount) throw new UserNotFoundError();
+		return result(operation.modifiedCount);
 	}
 
-	async update(id: string, input: unknown): Promise<ResultDTO> {
-		const decoded = decode<UserUpdateDTO>(updateUserCodec, input);
-		return updateUser(id, decoded);
+	async updateRole(
+		id: string,
+		input: unknown,
+		actor: Token.Payload,
+	): Promise<Result> {
+		const decoded = decode<UpdateUserRole>(updateUserRoleCodec, input);
+		const operation = await User.updateOne({ _id: id }, decoded);
+		if (!operation.matchedCount) throw new UserNotFoundError();
+		return result(operation.modifiedCount);
 	}
 
-	async updateStatus(id: string, input: unknown): Promise<ResultDTO> {
-		const decoded = decode<UserUpdateStatusDTO>(updateUserStatusCodec, input);
-		return updateUserStatus(id, decoded);
+	async updatePassword(
+		id: string,
+		input: unknown,
+		actor: Token.Payload,
+	): Promise<Result> {
+		const decoded = decode<UpdateUserPassword>(updateUserPasswordCodec, input);
+		const user = await this.getByIdOrThrow(id);
+		const isSame = await user.comparePassword(decoded.password);
+		if (isSame) throw new DuplicatePasswordError();
+		const operation = await User.updatePassword(id, decoded.password);
+		return result(operation.modifiedCount);
 	}
 
-	async updateRole(id: string, input: unknown): Promise<ResultDTO> {
-		const decoded = decode<UserUpdateRoleDTO>(updateUserRoleCodec, input);
-		return updateUserRole(id, decoded);
-	}
-
-	async updatePassword(id: string, input: unknown): Promise<ResultDTO> {
-		const decoded = decode<UserUpdatePasswordDTO>(
-			updateUserPasswordCodec,
-			input,
-		);
-		return updateUserPassword(id, decoded);
-	}
-
-	async delete(id: string): Promise<ResultDTO> {
-		return deleteUser(id);
+	async delete(id: string, actor: Token.Payload): Promise<Result> {
+		const operation = await User.deleteOne({ _id: id });
+		if (operation.deletedCount) throw new UserNotFoundError();
+		return result(operation.deletedCount);
 	}
 }

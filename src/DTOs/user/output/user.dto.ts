@@ -1,3 +1,3 @@
-import type { User } from "../../../types/user.type";
+import type { User as Types } from "../../../types/user.type";
 
-export type UserDTO = User.Secure;
+export type User = Types.Secure;

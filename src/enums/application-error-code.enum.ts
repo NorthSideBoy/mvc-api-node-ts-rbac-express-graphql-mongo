@@ -1,9 +1,13 @@
 export enum ApplicationErrorCode {
 	UserNotFound = "USER_NOT_FOUND",
-	UserAlreadyExists = "USER_ALREADY_EXISTS",
+	EmailInUse = "EMAIL_IN_USE",
+	UsernameInUse = "USERNAME_IN_USE",
 	InvalidCredentials = "INVALID_CREDENTIALS",
+	PermissionDenied = "PERMISSION_DENIED",
+	AdminAlreadyExists = "ADMIN_ALREADY_EXISTS",
 	TokenExpired = "TOKEN_EXPIRED",
 	TokenTampered = "TOKEN_TAMPERED",
 	TokenBefore = "TOKEN_BEFORE",
+	DuplicatePassword = "DUPLICATE_PASSWORD",
 	InternalError = "INTERNAL_ERROR",
 }

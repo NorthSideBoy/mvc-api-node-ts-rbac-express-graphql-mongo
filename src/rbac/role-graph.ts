@@ -1,8 +1,10 @@
+import type { Permission } from "./permissions";
 import { Role } from "./role";
 import { ROLE_DEFINITIONS } from "./role-definitions";
 
 type RoleEdge = {
 	includes: Set<Role>;
+	permissions: Set<Permission>;
 };
 
 export default class RoleGraph {
@@ -18,12 +20,13 @@ export default class RoleGraph {
 		for (const definition of ROLE_DEFINITIONS) {
 			graph.set(definition.name, {
 				includes: new Set(definition.includes ?? []),
+				permissions: new Set(definition.permissions ?? []),
 			});
 		}
 
 		for (const role of Object.values(Role)) {
 			if (!graph.has(role)) {
-				graph.set(role, { includes: new Set() });
+				graph.set(role, { includes: new Set(), permissions: new Set() });
 			}
 		}
 
@@ -42,7 +45,7 @@ export default class RoleGraph {
 	public getParentRoles(role: Role): Role[] {
 		const parents: Role[] = [];
 
-		for (const [potentialParent, edge] of this.graph.entries()) {
+		for (const [potentialParent, _edge] of this.graph.entries()) {
 			if (
 				potentialParent !== role &&
 				this.includesRole(potentialParent, role)
@@ -79,6 +82,14 @@ export default class RoleGraph {
 		return this.graph.has(role);
 	}
 
+	public hasPermission(role: Role, permission: Permission): boolean {
+		return this.resolvePermissions(role).has(permission);
+	}
+
+	public getAllPermissions(role: Role): Permission[] {
+		return Array.from(this.resolvePermissions(role));
+	}
+
 	private resolveRoles(role: Role): Role[] {
 		const visited = new Set<Role>();
 		const stack = [role];
@@ -100,6 +111,33 @@ export default class RoleGraph {
 		}
 
 		return Array.from(visited);
+	}
+
+	private resolvePermissions(role: Role): Set<Permission> {
+		const resolved = new Set<Permission>();
+		const visited = new Set<Role>();
+		const stack = [role];
+
+		while (stack.length > 0) {
+			const current = stack.pop();
+			if (!current || visited.has(current)) continue;
+
+			visited.add(current);
+			const edge = this.graph.get(current);
+			if (!edge) continue;
+
+			for (const permission of edge.permissions) {
+				resolved.add(permission);
+			}
+
+			for (const included of edge.includes) {
+				if (!visited.has(included)) {
+					stack.push(included);
+				}
+			}
+		}
+
+		return resolved;
 	}
 
 	public getDepth(role: Role): number {

@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { roleSchema } from "./fields.schema";
+import { updateRoleSchema } from "./fields.schema";
 
 export const updateUserRoleCodec = z
 	.object({
-		role: roleSchema,
+		role: updateRoleSchema,
 	})
 	.strict();

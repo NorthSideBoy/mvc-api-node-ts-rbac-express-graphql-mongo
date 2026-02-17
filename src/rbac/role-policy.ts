@@ -1,3 +1,4 @@
+import type { Permission } from "./permissions";
 import type { Role } from "./role";
 import RoleGraph from "./role-graph";
 
@@ -58,5 +59,17 @@ export default class RolePolicy {
 
 	public roots(): Role[] {
 		return this.getAll().filter((role) => this.getParents(role).length === 0);
+	}
+
+	public hasPermission(role: Role, permission: Permission): boolean {
+		return this.graph.hasPermission(role, permission);
+	}
+
+	public getPermissions(role: Role): Permission[] {
+		return this.graph.getAllPermissions(role);
+	}
+
+	public canManageRole(actor: Role, target: Role): boolean {
+		return actor !== target && this.graph.includesRole(actor, target);
 	}
 }

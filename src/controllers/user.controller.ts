@@ -13,16 +13,16 @@ import {
 	SuccessResponse,
 	Tags,
 } from "tsoa";
-import type { ResultDTO } from "../DTOs/operation/output/result.dto";
-import type { UserCreateDTO } from "../DTOs/user/input/create-user.dto";
-import type { UserLoginDTO } from "../DTOs/user/input/login-user.dto";
-import type { UserRegisterDTO } from "../DTOs/user/input/register-user.dto";
-import type { UserUpdateDTO } from "../DTOs/user/input/update-user.dto";
-import type { UserUpdatePasswordDTO } from "../DTOs/user/input/update-user-password.dto";
-import type { UserUpdateRoleDTO } from "../DTOs/user/input/update-user-role.dto";
-import type { UserUpdateStatusDTO } from "../DTOs/user/input/update-user-status.dto";
-import type { UserDTO } from "../DTOs/user/output/user.dto";
-import type { UserAuthDTO } from "../DTOs/user/output/user-auth.dto";
+import type { Result } from "../DTOs/operation/output/result.dto";
+import type { CreateUser } from "../DTOs/user/input/create-user.dto";
+import type { LoginUser } from "../DTOs/user/input/login-user.dto";
+import type { RegisterUser } from "../DTOs/user/input/register-user.dto";
+import type { UpdateUser } from "../DTOs/user/input/update-user.dto";
+import type { UpdateUserPassword } from "../DTOs/user/input/update-user-password.dto";
+import type { UpdateUserRole } from "../DTOs/user/input/update-user-role.dto";
+import type { UpdateUserStatus } from "../DTOs/user/input/update-user-status.dto";
+import type { AuthenticatedUser } from "../DTOs/user/output/auth-user.dto";
+import type { User } from "../DTOs/user/output/user.dto";
 import { Role } from "../rbac/role";
 import { UserService } from "../services/user.service";
 import type { ExtendedRequest } from "../types/extended-request.type";
@@ -42,9 +42,9 @@ export class UserController extends Controller {
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
 	async register(
-		@Body() body: UserRegisterDTO | unknown,
+		@Body() body: RegisterUser | unknown,
 		@Request() _request: ExtendedRequest,
-	): Promise<UserAuthDTO> {
+	): Promise<AuthenticatedUser> {
 		return this.userService.register(body);
 	}
 
@@ -59,9 +59,9 @@ export class UserController extends Controller {
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
 	async login(
-		@Body() body: UserLoginDTO | unknown,
+		@Body() body: LoginUser | unknown,
 		@Request() _request: ExtendedRequest,
-	): Promise<UserAuthDTO> {
+	): Promise<AuthenticatedUser> {
 		return this.userService.login(body);
 	}
 
@@ -76,19 +76,6 @@ export class UserController extends Controller {
 	}
 
 	/**
-	 * @summary Get current user profile
-	 */
-	@Get("/me")
-	@SuccessResponse(200)
-	@Response(401, "Unauthorized")
-	@Response(404, "NotFound")
-	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.USER])
-	async me(@Request() request: ExtendedRequest): Promise<UserDTO> {
-		return this.userService.profile(request.access.sub);
-	}
-
-	/**
 	 * @summary Get user by id
 	 */
 	@Get("/{id}")
@@ -96,9 +83,12 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.MANAGER])
-	async findById(@Path() id: string): Promise<UserDTO> {
-		return this.userService.findById(id);
+	@Security("Bearer", [Role.USER])
+	async findById(
+		@Path() id: string,
+		@Request() request: ExtendedRequest,
+	): Promise<User | null> {
+		return this.userService.findById(id, request.access);
 	}
 
 	/**
@@ -112,9 +102,12 @@ export class UserController extends Controller {
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.MANAGER])
-	async create(@Body() body: UserCreateDTO | unknown): Promise<UserDTO> {
+	async create(
+		@Body() body: CreateUser | unknown,
+		@Request() request: ExtendedRequest,
+	): Promise<User> {
 		this.setStatus(201);
-		return this.userService.create(body);
+		return this.userService.create(body, request.access);
 	}
 
 	/**
@@ -128,12 +121,13 @@ export class UserController extends Controller {
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.MANAGER])
+	@Security("Bearer", [Role.USER])
 	async update(
 		@Path() id: string,
-		@Body() body: UserUpdateDTO | unknown,
-	): Promise<ResultDTO> {
-		return this.userService.update(id, body);
+		@Body() body: UpdateUser | unknown,
+		@Request() request: ExtendedRequest,
+	): Promise<Result> {
+		return this.userService.update(id, body, request.access);
 	}
 
 	/**
@@ -149,9 +143,10 @@ export class UserController extends Controller {
 	@Security("Bearer", [Role.MANAGER])
 	async updateStatus(
 		@Path() id: string,
-		@Body() body: UserUpdateStatusDTO | unknown,
-	): Promise<ResultDTO> {
-		return this.userService.updateStatus(id, body);
+		@Body() body: UpdateUserStatus | unknown,
+		@Request() request: ExtendedRequest,
+	): Promise<Result> {
+		return this.userService.updateStatus(id, body, request.access);
 	}
 
 	/**
@@ -164,12 +159,13 @@ export class UserController extends Controller {
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.MANAGER])
+	@Security("Bearer", [Role.ADMIN])
 	async updateRole(
 		@Path() id: string,
-		@Body() body: UserUpdateRoleDTO | unknown,
-	): Promise<ResultDTO> {
-		return this.userService.updateRole(id, body);
+		@Body() body: UpdateUserRole | unknown,
+		@Request() request: ExtendedRequest,
+	): Promise<Result> {
+		return this.userService.updateRole(id, body, request.access);
 	}
 
 	/**
@@ -182,12 +178,13 @@ export class UserController extends Controller {
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
 	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.MANAGER])
+	@Security("Bearer", [Role.USER])
 	async updatePassword(
 		@Path() id: string,
-		@Body() body: UserUpdatePasswordDTO | unknown,
-	): Promise<ResultDTO> {
-		return this.userService.updatePassword(id, body);
+		@Body() body: UpdateUserPassword | unknown,
+		@Request() request: ExtendedRequest,
+	): Promise<Result> {
+		return this.userService.updatePassword(id, body, request.access);
 	}
 
 	/**
@@ -198,8 +195,11 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(500, "InternalServerError")
-	@Security("Bearer", [Role.MANAGER])
-	async delete(@Path() id: string): Promise<ResultDTO> {
-		return this.userService.delete(id);
+	@Security("Bearer", [Role.ADMIN])
+	async delete(
+		@Path() id: string,
+		@Request() request: ExtendedRequest,
+	): Promise<Result> {
+		return this.userService.delete(id, request.access);
 	}
 }

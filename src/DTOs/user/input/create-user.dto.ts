@@ -1,3 +1,3 @@
 import type { User } from "../../../types/user.type";
 
-export type UserCreateDTO = User.Create;
+export type CreateUser = User.Create;
