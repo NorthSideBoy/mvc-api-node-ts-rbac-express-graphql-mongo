@@ -1,12 +1,12 @@
 import { ApplicationErrorCode } from "../../enums/application-error-code.enum";
-import type { ApplicationErrorOptions } from "../application-error";
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../core/application-error";
 
 export class TokenBeforeError extends ApplicationError {
 	constructor(
-		message = "Token not active yet",
-		options: ApplicationErrorOptions = {},
+		message: string,
+		cause: unknown,
+		metadata?: Record<string, unknown>,
 	) {
-		super(message, ApplicationErrorCode.TokenBefore, options);
+		super(message, ApplicationErrorCode.TokenBefore, cause, metadata);
 	}
 }

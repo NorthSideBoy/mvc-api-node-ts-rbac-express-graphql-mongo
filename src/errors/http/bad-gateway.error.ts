@@ -1,8 +1,8 @@
 import { HttpErrorCode } from "../../enums/http-error-code.enum";
-import HttpError from "../http.error";
+import HttpError from "../core/http.error";
 
 export default class BadGatewayError extends HttpError {
-	constructor(message = "Bad Gateway") {
-		super(message, 502, HttpErrorCode.BadGateway);
+	constructor(message = "Bad Gateway.") {
+		super(message, HttpErrorCode.BadGateway, 502);
 	}
 }

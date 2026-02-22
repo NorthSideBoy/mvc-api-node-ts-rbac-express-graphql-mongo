@@ -33,7 +33,8 @@ import { UsernameInUseError } from "../errors/user/username-in-use.error";
 import { roleToRBACRole, updateRoleToRole } from "../mappers/role.mapper";
 import { toAuthenticated } from "../mappers/user.mapper";
 import User from "../models/user.model";
-import { Actor } from "../rbac/actor";
+import { OPERATIONS } from "../rbac/constants/operations.constant";
+import Actor from "../rbac/models/actor.model";
 import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
 
@@ -58,7 +59,8 @@ export class UserService {
 
 	async register(input: unknown): Promise<AuthenticatedUser> {
 		const decoded = decode<RegisterUser>(registerUserCodec, input);
-		if (!this.ctx.actor.can("user:read")) throw new PermissionDeniedError();
+		if (!this.ctx.actor.can(OPERATIONS.USER_READ))
+			throw new PermissionDeniedError();
 		await this.checkUserUniqueness(decoded);
 		const created = await User.create(decoded);
 		const token = tokenizer.sign({
@@ -72,7 +74,8 @@ export class UserService {
 
 	async login(input: unknown): Promise<AuthenticatedUser> {
 		const decoded = decode<LoginUser>(loginUserCodec, input);
-		if (!this.ctx.actor.can("user:read")) throw new PermissionDeniedError();
+		if (!this.ctx.actor.can(OPERATIONS.USER_READ))
+			throw new PermissionDeniedError();
 		const user = await User.findByEmail(decoded.email);
 		if (!user) throw new InvalidUserCredentialsError();
 		const isValid = await user.comparePassword(decoded.password);
@@ -87,21 +90,24 @@ export class UserService {
 	}
 
 	async findById(id: string): Promise<DTO | null> {
-		if (!this.ctx.actor.can("user:read")) throw new PermissionDeniedError();
+		if (!this.ctx.actor.can(OPERATIONS.USER_READ))
+			throw new PermissionDeniedError();
 		const user = await User.findById(id);
 		if (!user) return null;
 		return user.secure;
 	}
 
 	async findAll(): Promise<DTO[]> {
-		if (!this.ctx.actor.can("user:read")) throw new PermissionDeniedError();
+		if (!this.ctx.actor.can(OPERATIONS.USER_READ))
+			throw new PermissionDeniedError();
 		const users = await User.find();
 		return users.map((user) => user.secure);
 	}
 
 	async search(input: unknown): Promise<Search<DTO>> {
 		const decoded = decode<QueryUsers>(searchUsersCodec, input);
-		if (!this.ctx.actor.can("user:read")) throw new PermissionDeniedError();
+		if (!this.ctx.actor.can(OPERATIONS.USER_READ))
+			throw new PermissionDeniedError();
 		const result = await User.search(decoded);
 		const docs = result.docs.map((user) => user.secure);
 		return {
@@ -112,7 +118,12 @@ export class UserService {
 
 	async create(input: unknown): Promise<DTO> {
 		const decoded = decode<CreateUser>(createUserCodec, input);
-		if (!this.ctx.actor.canManage("user:create", Actor.dummy(decoded.role)))
+		if (
+			!this.ctx.actor.canManage(
+				OPERATIONS.USER_CREATE,
+				Actor.dummy(decoded.role),
+			)
+		)
 			throw new PermissionDeniedError();
 		if (!this.ctx.actor.canAssign(decoded.role))
 			throw new PermissionDeniedError();
@@ -124,7 +135,7 @@ export class UserService {
 	async updateProfile(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserProfile>(updateUserProfileCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-profile", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_PROFILE, user))
 			throw new PermissionDeniedError();
 		const operation = await User.updateOne({ _id: id }, decoded);
 		return result(operation.modifiedCount);
@@ -133,7 +144,7 @@ export class UserService {
 	async updateStatus(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserStatus>(updateUserStatusCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-status", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_STATUS, user))
 			throw new PermissionDeniedError();
 		const operation = await User.updateOne({ _id: id }, decoded);
 		return result(operation.modifiedCount);
@@ -142,7 +153,7 @@ export class UserService {
 	async updateRole(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserRole>(updateUserRoleCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-role", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_ROLE, user))
 			throw new PermissionDeniedError();
 		const role = updateRoleToRole(decoded.role);
 		const RBACRole = roleToRBACRole(role);
@@ -154,7 +165,7 @@ export class UserService {
 	async updatePassword(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserPassword>(updateUserPasswordCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-password", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_PASSWORD, user))
 			throw new PermissionDeniedError();
 		const isSame = await user.comparePassword(decoded.password);
 		if (isSame) throw new DuplicatePasswordError();
@@ -165,7 +176,7 @@ export class UserService {
 	async updateEmail(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserEmail>(updateUserEmailCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-email", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_EMAIL, user))
 			throw new PermissionDeniedError();
 		const isEmailAvailable = await User.isEmailAvailable(decoded.email, id);
 		if (!isEmailAvailable) throw new EmailInUseError(decoded.email);
@@ -176,7 +187,7 @@ export class UserService {
 	async updateUsername(id: string, input: unknown): Promise<Result> {
 		const decoded = decode<UpdateUserUsername>(updateUserUsernameCodec, input);
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:update-username", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_UPDATE_USERNAME, user))
 			throw new PermissionDeniedError();
 		const isUsernameAvailable = await User.isUsernameAvailable(
 			decoded.username,
@@ -189,7 +200,7 @@ export class UserService {
 
 	async delete(id: string): Promise<Result> {
 		const user = await this.getByIdOrThrow(id);
-		if (!this.ctx.actor.canManage("user:delete", user))
+		if (!this.ctx.actor.canManage(OPERATIONS.USER_DELETE, user))
 			throw new PermissionDeniedError();
 		const operation = await User.deleteOne({ _id: id });
 		return result(operation.deletedCount);

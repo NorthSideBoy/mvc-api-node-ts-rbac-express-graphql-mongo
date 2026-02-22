@@ -4,9 +4,9 @@ export enum ApplicationErrorCode {
 	UsernameInUse = "USERNAME_IN_USE",
 	InvalidCredentials = "INVALID_CREDENTIALS",
 	PermissionDenied = "PERMISSION_DENIED",
+	UserDisabled = "USER_DISABLED",
 	TokenExpired = "TOKEN_EXPIRED",
 	TokenTampered = "TOKEN_TAMPERED",
 	TokenBefore = "TOKEN_BEFORE",
 	DuplicatePassword = "DUPLICATE_PASSWORD",
-	InternalError = "INTERNAL_ERROR",
 }

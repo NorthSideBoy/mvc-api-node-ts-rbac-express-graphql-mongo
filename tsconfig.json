@@ -2,8 +2,8 @@
 	// Visit https://aka.ms/tsconfig to read more about this file
 	"compilerOptions": {
 		// File Layout
-		// "rootDir": "./src",
-		// "outDir": "./dist",
+		"rootDir": "./src",
+		"outDir": "./dist",
 
 		// Environment Settings
 		// See also https://aka.ms/tsconfig/module
@@ -11,10 +11,10 @@
 		"moduleResolution": "node",
 		"esModuleInterop": true,
 		"allowSyntheticDefaultImports": true,
-		"target": "esnext",
-		"types": [],
+		"target": "es2024",
+		"types": ["node"],
 		// For nodejs:
-		// "lib": ["esnext"],
+		"lib": ["esnext"],
 		// "types": ["node"],
 		// and npm install -D @types/node
 
@@ -26,7 +26,7 @@
 		// Stricter Typechecking Options
 		"noUncheckedIndexedAccess": true,
 		"strictNullChecks": true,
-		"exactOptionalPropertyTypes": true,
+		"exactOptionalPropertyTypes": false,
 
 		// Style Options
 		// "noImplicitReturns": true,

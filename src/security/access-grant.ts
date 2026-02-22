@@ -1,5 +1,6 @@
 import type { Role } from "../enums/role.enum";
-import UnauthorizedError from "../errors/http/unauthorized.error";
+import { PermissionDeniedError } from "../errors/authorization/permission-denied.error";
+import { UserDisabledError } from "../errors/user/user-disabled.error";
 import type { AccessClaims } from "./access-claims";
 import type { UserActor } from "./actor";
 
@@ -10,9 +11,9 @@ export class AccessGrant {
 		claims: AccessClaims,
 		allowedRoles: ReadonlyArray<Role>,
 	): AccessGrant {
-		if (!claims.isEnabled()) throw new UnauthorizedError("User is disabled");
+		if (!claims.isEnabled()) throw new UserDisabledError();
 		if (!claims.actor.canAccess(allowedRoles))
-			throw new UnauthorizedError("Insufficient permissions");
+			throw new PermissionDeniedError();
 		return new AccessGrant(claims);
 	}
 

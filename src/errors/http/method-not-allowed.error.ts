@@ -1,8 +1,8 @@
 import { HttpErrorCode } from "../../enums/http-error-code.enum";
-import HttpError from "../http.error";
+import HttpError from "../core/http.error";
 
 export default class MethodNotAllowedError extends HttpError {
-	constructor(message = "Method Not Allowed") {
-		super(message, 405, HttpErrorCode.MethodNotAllowed);
+	constructor(message = "Method not allowed.") {
+		super(message, HttpErrorCode.MethodNotAllowed, 405);
 	}
 }

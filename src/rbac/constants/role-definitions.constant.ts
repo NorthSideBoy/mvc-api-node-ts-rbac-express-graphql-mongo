@@ -1,6 +1,6 @@
-import type { IRole } from "./contracts";
-import { PERMISSIONS } from "./permissions";
-import { Role } from "./role";
+import type { IRole } from "../contracts/role.contract";
+import { Role } from "../enums/role.enum";
+import { PERMISSIONS } from "./permissions.constant";
 
 export const ROLE_DEFINITIONS: readonly IRole[] = [
 	{

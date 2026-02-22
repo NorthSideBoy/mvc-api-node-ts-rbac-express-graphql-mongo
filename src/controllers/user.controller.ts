@@ -100,7 +100,6 @@ export class UserController extends Controller {
 	@Get("/{id}")
 	@SuccessResponse(200)
 	@Response(401, "Unauthorized")
-	@Response(404, "NotFound")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	async findById(

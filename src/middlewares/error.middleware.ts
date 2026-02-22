@@ -1,8 +1,9 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
 import { ApplicationErrorCode } from "../enums/application-error-code.enum";
-import { ApplicationError } from "../errors/application-error";
-import HttpError from "../errors/http.error";
+import { HttpErrorCode } from "../enums/http-error-code.enum";
+import { ApplicationError } from "../errors/core/application-error";
+import HttpError from "../errors/core/http.error";
 import { logger } from "../utils/logger.util";
 
 export const errorMiddleware: ErrorRequestHandler = (
@@ -12,7 +13,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 	next,
 ) => {
 	if (error instanceof ZodError) {
-		logger.error({ err: error }, "[HTTP] validation error");
+		logger.error({ error }, "[HTTP] validation error");
 		const message = error.issues
 			.map((i) =>
 				i.path.length > 0
@@ -23,7 +24,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 		return response.status(422).json({
 			message,
 			code: "VALIDATION_ERROR",
-			details: error.issues,
+			metadata: error.issues,
 		});
 	}
 
@@ -35,16 +36,18 @@ export const errorMiddleware: ErrorRequestHandler = (
 	}
 
 	if (error instanceof ApplicationError) {
-		logger.error({ err: error }, "[HTTP] application error");
+		logger.error({ error }, "[HTTP] application error");
 		const statusMap: Record<string, number> = {
 			[ApplicationErrorCode.UserNotFound]: 404,
 			[ApplicationErrorCode.EmailInUse]: 409,
+			[ApplicationErrorCode.UsernameInUse]: 409,
 			[ApplicationErrorCode.InvalidCredentials]: 401,
 			[ApplicationErrorCode.PermissionDenied]: 403,
+			[ApplicationErrorCode.DuplicatePassword]: 409,
+			[ApplicationErrorCode.UserDisabled]: 403,
 			[ApplicationErrorCode.TokenExpired]: 401,
 			[ApplicationErrorCode.TokenTampered]: 401,
 			[ApplicationErrorCode.TokenBefore]: 401,
-			[ApplicationErrorCode.InternalError]: 500,
 		};
 
 		const status = statusMap[error.code] ?? 400;
@@ -52,15 +55,24 @@ export const errorMiddleware: ErrorRequestHandler = (
 		return response.status(status).json({
 			message: error.message,
 			code: error.code,
-			details: error.details,
+			metadata: error.metadata,
+		});
+	}
+
+	if (error instanceof SyntaxError) {
+		logger.error({ error }, "[HTTP] syntax error");
+		return response.status(400).json({
+			message: error.message,
+			code: "SYNTAX_ERROR",
 		});
 	}
 
 	if (error instanceof Error) {
-		logger.error({ err: error }, "[HTTP] unexpected error");
+		console.log(error);
+		logger.error({ error }, "[HTTP] unexpected error");
 		return response.status(500).json({
 			message: "Internal server error",
-			code: ApplicationErrorCode.InternalError,
+			code: HttpErrorCode.InternalError,
 		});
 	}
 

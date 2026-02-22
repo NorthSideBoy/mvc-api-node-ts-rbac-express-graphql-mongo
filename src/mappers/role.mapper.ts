@@ -1,5 +1,5 @@
 import { Role, UpdateRole } from "../enums/role.enum";
-import { Role as RBACRole } from "../rbac/role";
+import { Role as RBACRole } from "../rbac/enums/role.enum";
 
 export function roleToRBACRole(role: RBACRole): Role {
 	switch (role) {

@@ -1,12 +1,12 @@
 import { ApplicationErrorCode } from "../../enums/application-error-code.enum";
-import type { ApplicationErrorOptions } from "../application-error";
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../core/application-error";
 
 export class TokenExpiredError extends ApplicationError {
 	constructor(
-		message = "Token expired",
-		options: ApplicationErrorOptions = {},
+		message: string,
+		cause: unknown,
+		metadata?: Record<string, unknown>,
 	) {
-		super(message, ApplicationErrorCode.TokenExpired, options);
+		super(message, ApplicationErrorCode.TokenExpired, cause, metadata);
 	}
 }

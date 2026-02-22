@@ -1,6 +1,6 @@
 import { type IActor, Kind } from "../contracts/actor.contract";
-import { Actor as RBACActor } from "../rbac/actor";
-import { Role } from "../rbac/role";
+import { Role } from "../rbac/enums/role.enum";
+import { default as RBACActor } from "../rbac/models/actor.model";
 import type { AccessClaims } from "./access-claims";
 export class UserActor extends RBACActor implements IActor {
 	readonly kind = Kind.USER;

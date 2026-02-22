@@ -26,23 +26,20 @@ class Tokenizer {
 			return verify(token, env.JWT.SECRET) as Token.Payload;
 		} catch (error) {
 			if (error instanceof JwtTokenExpiredError) {
-				throw new AppTokenExpiredError("Token expired", {
-					cause: error,
-					details: { expiredAt: error.expiredAt },
+				throw new AppTokenExpiredError("Token expired", error, {
+					expiredAt: error.expiredAt,
 				});
 			}
 
 			if (error instanceof JwtNotBeforeError) {
-				throw new AppTokenBeforeError("Token not active yet", {
-					cause: error,
-					details: { date: error.date },
+				throw new AppTokenBeforeError("Token not active yet", error, {
+					date: error.date,
 				});
 			}
 
 			if (error instanceof JwtJsonWebTokenError) {
-				throw new AppTokenTamperedError("Token is invalid", {
-					cause: error,
-					details: { message: error.message },
+				throw new AppTokenTamperedError("Token is invalid", error, {
+					message: error.message,
 				});
 			}
 

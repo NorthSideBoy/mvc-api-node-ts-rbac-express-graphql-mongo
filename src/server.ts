@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import cors from "cors";
 import express from "express";
+import { pinoHttp } from "pino-http";
 import swaggerUi from "swagger-ui-express";
 import { bootstrap, shutdown } from "./bootstrap";
 import { env } from "./configs/env.config";
@@ -11,11 +12,11 @@ import { logger } from "./utils/logger.util";
 
 const app = express();
 
-// app.use(
-// 	pinoHttp({
-// 		logger: logger.raw,
-// 	}),
-// );
+app.use(
+	pinoHttp({
+		logger: logger.raw,
+	}),
+);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

@@ -1,6 +1,6 @@
-import type { IActor as ActorLike } from "../rbac/contracts";
-import type { Action } from "../rbac/permissions";
-import type { Role } from "../rbac/role";
+import type { IActor as ActorLike } from "../rbac/contracts/actor.contract";
+import type { Role } from "../rbac/enums/role.enum";
+import type { Operation } from "../rbac/types/operation.type";
 
 export enum Kind {
 	USER = "USER",
@@ -16,8 +16,8 @@ export interface IActor {
 	readonly enable: boolean;
 	readonly issuedAt?: number;
 	readonly expiresAt?: number;
-	can(action: Action): boolean;
-	canManage(action: Action, target: ActorLike): boolean;
+	can(operation: Operation): boolean;
+	canManage(operation: Operation, target: ActorLike): boolean;
 	canAssign(targetRole: Role): boolean;
 	canAccess(allowed: ReadonlyArray<Role>): boolean;
 }

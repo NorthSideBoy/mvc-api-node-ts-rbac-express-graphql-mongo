@@ -9,6 +9,7 @@
 		"ignoreUnknown": false,
 		"includes": [
 			"**",
+			"!dist",
 			"!src/routes",
 			"!src/docs",
 			"!src/plugins/paginated-query.plugin.ts"

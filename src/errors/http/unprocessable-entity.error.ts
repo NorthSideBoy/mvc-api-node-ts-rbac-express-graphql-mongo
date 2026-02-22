@@ -1,8 +1,8 @@
 import { HttpErrorCode } from "../../enums/http-error-code.enum";
-import HttpError from "../http.error";
+import HttpError from "../core/http.error";
 
 export default class UnprocessableEntityError extends HttpError {
-	constructor(message = "Unprocessable Schema") {
-		super(message, 422, HttpErrorCode.UnprocessableEntity);
+	constructor(message = "Unprocessable entity.") {
+		super(message, HttpErrorCode.UnprocessableEntity, 422);
 	}
 }

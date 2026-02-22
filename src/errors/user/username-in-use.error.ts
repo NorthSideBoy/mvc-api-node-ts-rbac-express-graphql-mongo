@@ -1,5 +1,5 @@
 import { ApplicationErrorCode } from "../../enums/application-error-code.enum";
-import { ApplicationError } from "../application-error";
+import { ApplicationError } from "../core/application-error";
 
 export class UsernameInUseError extends ApplicationError {
 	constructor(username: string) {

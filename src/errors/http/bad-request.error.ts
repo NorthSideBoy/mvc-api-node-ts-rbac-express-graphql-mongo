@@ -1,8 +1,8 @@
 import { HttpErrorCode } from "../../enums/http-error-code.enum";
-import HttpError from "../http.error";
+import HttpError from "../core/http.error";
 
 export default class BadRequestError extends HttpError {
-	constructor(message = "Bad request") {
-		super(message, 400, HttpErrorCode.BadRequest);
+	constructor(message = "Bad request.") {
+		super(message, HttpErrorCode.BadRequest, 400);
 	}
 }
