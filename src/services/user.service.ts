@@ -9,7 +9,7 @@ import { updateUserProfileCodec } from "../codecs/user/update-user-profile.codec
 import { updateUserRoleCodec } from "../codecs/user/update-user-role.codec";
 import { updateUserStatusCodec } from "../codecs/user/update-user-status.codec";
 import { updateUserUsernameCodec } from "../codecs/user/update-user-username.codec";
-import { context } from "../context/context.service";
+import { context } from "../context/context.handler";
 import type { ExecutionContext } from "../context/execution-context";
 import type { Result } from "../DTOs/operation/output/result.dto";
 import type { Search } from "../DTOs/operation/output/search.dto";

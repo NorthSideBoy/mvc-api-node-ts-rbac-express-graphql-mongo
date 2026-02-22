@@ -1,7 +1,7 @@
 import type { RequestHandler } from "express";
 import { ExecutionContext } from "../context/execution-context";
 import type { ExtendedRequest } from "../types/extended-request.type";
-import { context } from "../context/context.service";
+import { context } from "../context/context.handler";
 
 export const contextMiddleware: RequestHandler = (
 	request: ExtendedRequest,
