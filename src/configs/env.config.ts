@@ -1,13 +1,5 @@
 import dotenv from "dotenv";
 import { z } from "zod";
-import {
-	birthdaySchema,
-	emailSchema,
-	firstnameSchema,
-	lastnameSchema,
-	passwordSchema,
-	usernameSchema,
-} from "../codecs/user/fields.schema";
 
 dotenv.config({ quiet: true });
 
@@ -25,13 +17,6 @@ const envSchema = z.object({
 	PORT: toNumber().default(3000),
 	LOG_LEVEL: z.enum(["debug", "info", "warn", "error"]).default("debug"),
 
-	ADMIN_FIRSTNAME: firstnameSchema,
-	ADMIN_LASTNAME: lastnameSchema,
-	ADMIN_USERNAME: usernameSchema,
-	ADMIN_EMAIL: emailSchema,
-	ADMIN_PASSWORD: passwordSchema,
-	ADMIN_BIRTHDAY: birthdaySchema,
-
 	DB_HOST: z.string().default("127.0.0.1"),
 	DB_PORT: toNumber().default(27017),
 	DB_NAME: z.string(),
@@ -45,6 +30,11 @@ const envSchema = z.object({
 		.string()
 		.regex(/^\d+(ms|s|m|h|d|w)$/)
 		.default("1h"),
+
+	CORS_ORIGIN: z.string().default("*"),
+
+	RATE_LIMIT_WINDOW: toNumber().default(15),
+	RATE_LIMIT_MAX: toNumber().default(500),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -90,5 +80,14 @@ export const env = Object.freeze({
 	JWT: {
 		SECRET: e.JWT_SECRET,
 		EXPIRES_IN: e.JWT_EXPIRES_IN,
+	},
+
+	CORS: {
+		ORIGIN: e.CORS_ORIGIN,
+	},
+
+	RATE_LIMIT: {
+		MAX: e.RATE_LIMIT_MAX,
+		WINDOW: e.RATE_LIMIT_WINDOW,
 	},
 });

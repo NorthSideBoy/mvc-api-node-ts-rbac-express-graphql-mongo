@@ -7,6 +7,7 @@ import { bootstrap, shutdown } from "./bootstrap";
 import { env } from "./configs/env.config";
 import swaggerDocument from "./docs/swagger.json";
 import { errorMiddleware } from "./middlewares/error.middleware";
+import { generalLimiter } from "./middlewares/rate-limiter.middleware";
 import { RegisterRoutes } from "./routes/routes";
 import { logger } from "./utils/logger.util";
 
@@ -17,9 +18,10 @@ app.use(
 		? pinoHttp({ logger: logger.raw, level: env.LOG_LEVEL })
 		: (_req, _res, next) => next(),
 );
-app.use(cors());
+app.use(cors({ origin: env.CORS.ORIGIN }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(generalLimiter);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/swagger.json", (_request, response) => {
@@ -34,7 +36,10 @@ const startServer = async (): Promise<void> => {
 	await bootstrap();
 
 	const server = app.listen(env.PORT, env.HOST, () => {
-		logger.info({ host: env.HOST, port: env.PORT }, "[HTTP] listening");
+		logger.info(
+			{ host: env.HOST, port: env.PORT, cors: env.CORS.ORIGIN },
+			"[HTTP] listening",
+		);
 		logger.info(
 			`Swagger docs available at http://${env.HOST}:${env.PORT}/docs`,
 		);

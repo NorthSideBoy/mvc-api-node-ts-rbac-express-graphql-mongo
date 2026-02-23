@@ -23,12 +23,13 @@ export const errorMiddleware: ErrorRequestHandler = (
 			.join("; ");
 		return response.status(422).json({
 			message,
-			code: "VALIDATION_ERROR",
+			code: HttpErrorCode.UnprocessableEntity,
 			metadata: error.issues,
 		});
 	}
 
 	if (error instanceof HttpError) {
+		logger.error({ error }, "[HTTP] expected error");
 		return response.status(error.status).json({
 			message: error.message,
 			code: error.code,

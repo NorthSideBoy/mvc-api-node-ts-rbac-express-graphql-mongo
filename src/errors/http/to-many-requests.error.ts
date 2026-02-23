@@ -3,6 +3,6 @@ import HttpError from "../core/http.error";
 
 export default class TooManyRequestsError extends HttpError {
 	constructor(message = "Too many requests.") {
-		super(message, HttpErrorCode.ToManyRequest, 429);
+		super(message, HttpErrorCode.TooManyRequest, 429);
 	}
 }

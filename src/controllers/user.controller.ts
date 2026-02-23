@@ -30,6 +30,7 @@ import type { AuthenticatedUser } from "../DTOs/user/output/authenticated-user.d
 import type { User } from "../DTOs/user/output/user.dto";
 import { Role } from "../enums/role.enum";
 import { contextMiddleware } from "../middlewares/context.middleware";
+import { authLimiter } from "../middlewares/rate-limiter.middleware";
 import UserService from "../services/user.service";
 
 @Route("users")
@@ -44,6 +45,7 @@ export class UserController extends Controller {
 	@Response(400, "BadRequest")
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	async register(
 		@Body() body: RegisterUser | unknown,
@@ -60,7 +62,9 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
+	@Middlewares([authLimiter])
 	async login(@Body() body: LoginUser | unknown): Promise<AuthenticatedUser> {
 		return this.userService.login(body);
 	}
@@ -72,6 +76,7 @@ export class UserController extends Controller {
 	@SuccessResponse(200)
 	@Response(401, "Unauthorized")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -85,6 +90,7 @@ export class UserController extends Controller {
 	@Get("/{id}")
 	@SuccessResponse(200)
 	@Response(401, "Unauthorized")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -98,6 +104,7 @@ export class UserController extends Controller {
 	@Get("/")
 	@SuccessResponse(200)
 	@Response(401, "Unauthorized")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -114,6 +121,7 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.MANAGER])
 	@Middlewares([contextMiddleware])
@@ -132,6 +140,7 @@ export class UserController extends Controller {
 	@Response(404, "NotFound")
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -151,6 +160,7 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.MANAGER])
 	@Middlewares([contextMiddleware])
@@ -170,6 +180,7 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.ADMIN])
 	@Middlewares([contextMiddleware])
@@ -189,6 +200,7 @@ export class UserController extends Controller {
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -209,6 +221,7 @@ export class UserController extends Controller {
 	@Response(404, "NotFound")
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -229,6 +242,7 @@ export class UserController extends Controller {
 	@Response(404, "NotFound")
 	@Response(409, "Conflict")
 	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
@@ -246,6 +260,7 @@ export class UserController extends Controller {
 	@SuccessResponse(200)
 	@Response(401, "Unauthorized")
 	@Response(404, "NotFound")
+	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.ADMIN])
 	@Middlewares([contextMiddleware])

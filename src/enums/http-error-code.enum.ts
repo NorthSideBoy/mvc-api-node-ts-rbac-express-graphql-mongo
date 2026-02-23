@@ -8,7 +8,7 @@ export enum HttpErrorCode {
 	NotFound = "NOT_FOUND",
 	NotImplemented = "NOT_IMPLEMENTED",
 	ServiceUnavailable = "SERVICE_UNAVAILABLE",
-	ToManyRequest = "ToManyRequest",
+	TooManyRequest = "TOO_MANY_REQUEST",
 	MethodNotAllowed = "METHOD_NOT_ALLOWED",
 	Unauthorized = "UNAUTHORIZED",
 	InternalError = "INTERNAL_ERROR",
