@@ -10,6 +10,7 @@ RESTful API boilerplate implementing **MVC** + **RBAC (Role-Based Access Control
 [![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)](#tech-stack)
 [![MongoDB](https://img.shields.io/badge/mongodb-8.x-47A248?logo=mongodb&logoColor=white)](#tech-stack)
 [![Swagger](https://img.shields.io/badge/openapi-swagger-85EA2D?logo=swagger&logoColor=black)](#api-documentation)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NorthSideBoy/mvc-rbac-api-node-express-ts-mongo)
 
 </div>
 
@@ -182,7 +183,6 @@ npm run dev
 Server logs include the Swagger URL:
 
 - Swagger UI: `http://127.0.0.1:<PORT>/docs`
-- OpenAPI JSON: `http://127.0.0.1:<PORT>/swagger.json`
 
 ## Environment variables
 
