@@ -1,14 +1,20 @@
 import "reflect-metadata";
+import { ApolloServer } from "@apollo/server";
+import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin/landingPage/default";
+import { expressMiddleware } from "@as-integrations/express5";
 import cors from "cors";
 import express from "express";
 import { pinoHttp } from "pino-http";
 import swaggerUi from "swagger-ui-express";
+import { buildSchema } from "type-graphql";
 import { bootstrap, shutdown } from "./bootstrap";
 import { env } from "./configs/env.config";
 import swaggerDocument from "./docs/swagger.json";
-import { errorMiddleware } from "./middlewares/error.middleware";
-import { generalLimiter } from "./middlewares/rate-limiter.middleware";
+import { errorMiddleware } from "./middlewares/rest/error.middleware";
+import { generalLimiter } from "./middlewares/rest/rate-limiter.middleware";
+import UserResolver from "./resolvers/user.resolver";
 import { RegisterRoutes } from "./routes/routes";
+import type { ExtendedRequest } from "./types/extended-request.type";
 import { logger } from "./utils/logger.util";
 
 const app = express();
@@ -32,8 +38,31 @@ RegisterRoutes(app);
 
 app.use(errorMiddleware);
 
-const startServer = async (): Promise<void> => {
+const start = async (): Promise<void> => {
 	await bootstrap();
+
+	const schema = await buildSchema({
+		resolvers: [UserResolver],
+		validate: false,
+	});
+
+	const apollo = new ApolloServer({
+		schema,
+		plugins: [ApolloServerPluginLandingPageLocalDefault({ footer: false })],
+	});
+
+	await apollo.start();
+
+	app.use(
+		"/graphql",
+		cors<cors.CorsRequest>({ origin: env.CORS.ORIGIN }),
+		express.json(),
+		expressMiddleware(apollo, {
+			context: async ({ req }): Promise<ExtendedRequest> => {
+				return req;
+			},
+		}),
+	);
 
 	const server = app.listen(env.PORT, env.HOST, () => {
 		logger.info(
@@ -43,11 +72,15 @@ const startServer = async (): Promise<void> => {
 		logger.info(
 			`Swagger docs available at http://${env.HOST}:${env.PORT}/docs`,
 		);
+		logger.info(
+			`GraphQL Playground available at http://${env.HOST}:${env.PORT}/graphql`,
+		);
 	});
 
 	const gracefulShutdown = async (): Promise<void> => {
 		logger.info("[HTTP] shutting down");
 		server.close(async () => {
+			await apollo.stop();
 			await shutdown();
 			process.exit(0);
 		});
@@ -57,4 +90,8 @@ const startServer = async (): Promise<void> => {
 	process.on("SIGTERM", gracefulShutdown);
 };
 
-void startServer();
+start().catch((error) => {
+	console.log(error);
+	logger.error("Failed to start server:", error);
+	process.exit(1);
+});

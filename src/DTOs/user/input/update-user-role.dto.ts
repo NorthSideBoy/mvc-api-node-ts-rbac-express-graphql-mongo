@@ -2,7 +2,7 @@ import type { UpdateRole } from "../../../enums/role.enum";
 
 type UpdateUserRoleType = { role: UpdateRole };
 
-export class UpdateUserRole {
+export default class UpdateUserRole {
 	role: UpdateRole;
 }
 

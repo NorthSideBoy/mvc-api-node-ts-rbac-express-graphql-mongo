@@ -2,7 +2,7 @@ import type { User } from "../../../types/user.type";
 
 type UpdateUserUsernameType = Pick<User.Create, "username">;
 
-export class UpdateUserUsername {
+export default class UpdateUserUsername {
 	username: string;
 }
 

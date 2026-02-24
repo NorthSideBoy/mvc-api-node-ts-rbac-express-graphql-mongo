@@ -2,7 +2,7 @@ import type { User } from "../../../types/user.type";
 
 type UpdateUserStatusType = Pick<User.Create, "enable">;
 
-export class UpdateUserStatus {
+export default class UpdateUserStatus {
 	enable: boolean;
 }
 

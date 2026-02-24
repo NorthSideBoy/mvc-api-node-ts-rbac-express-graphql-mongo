@@ -3,7 +3,7 @@ import type { User } from "../../../types/user.type";
 
 type AuthenticatedUserType = User.Secure & { token: string };
 
-export class AuthenticatedUser {
+export default class AuthenticatedUser {
 	id: string;
 	firstname: string;
 	lastname: string;

@@ -3,7 +3,7 @@ import type { User as Types } from "../../../types/user.type";
 
 type UserType = Types.Secure;
 
-export class User {
+export default class User {
 	id: string;
 	firstname: string;
 	lastname: string;

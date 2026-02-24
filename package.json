@@ -30,10 +30,13 @@
 	},
 	"homepage": "https://github.com/NorthSideBoy/mvc-rbac-api-node-express-ts-mongo#readme",
 	"dependencies": {
+		"@apollo/server": "^5.4.0",
+		"@as-integrations/express5": "^1.1.2",
 		"@tsoa/runtime": "^7.0.0-alpha.0",
 		"@typegoose/typegoose": "^13.1.0",
 		"bcrypt": "^6.0.0",
 		"body-parser": "^2.2.2",
+		"class-transformer": "^0.5.1",
 		"cors": "^2.8.6",
 		"dotenv": "^17.3.1",
 		"express": "^5.2.1",
@@ -46,6 +49,7 @@
 		"pino-http": "^11.0.0",
 		"swagger-ui-express": "^5.0.1",
 		"tsoa": "^7.0.0-alpha.0",
+		"type-graphql": "^2.0.0-rc.3",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {

@@ -12,7 +12,7 @@ import type { BeAnObject } from "@typegoose/typegoose/lib/types";
 import { type Filter, ObjectId } from "mongodb";
 import type { Types } from "mongoose";
 import paginatePlugin from "mongoose-paginate-v2";
-import type { Search } from "../DTOs/operation/output/search.dto";
+import type Search from "../DTOs/operation/output/search.dto";
 import { Role } from "../enums/role.enum";
 import {
 	filterable,

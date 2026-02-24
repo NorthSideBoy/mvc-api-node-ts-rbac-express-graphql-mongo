@@ -1,10 +1,10 @@
 import type { ErrorRequestHandler } from "express";
 import { ZodError } from "zod";
-import { ApplicationErrorCode } from "../enums/application-error-code.enum";
-import { HttpErrorCode } from "../enums/http-error-code.enum";
-import { ApplicationError } from "../errors/core/application-error";
-import HttpError from "../errors/core/http.error";
-import { logger } from "../utils/logger.util";
+import { ApplicationErrorCode } from "../../enums/application-error-code.enum";
+import { HttpErrorCode } from "../../enums/http-error-code.enum";
+import { ApplicationError } from "../../errors/core/application-error";
+import HttpError from "../../errors/core/http.error";
+import { logger } from "../../utils/logger.util";
 
 export const errorMiddleware: ErrorRequestHandler = (
 	error,

@@ -3,7 +3,7 @@ import type { User } from "../../../types/user.type";
 
 type CreateUserType = User.Create;
 
-export class CreateUser {
+export default class CreateUser {
 	firstname: string;
 	lastname: string;
 	username: string;
@@ -11,7 +11,7 @@ export class CreateUser {
 	role: Role;
 	password: string;
 	birthday: Date;
-	enable: boolean;
+	enable?: boolean;
 }
 
 const _typeCheck: CreateUserType = {} as CreateUser;

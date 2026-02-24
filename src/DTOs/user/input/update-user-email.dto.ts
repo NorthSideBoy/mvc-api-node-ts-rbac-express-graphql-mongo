@@ -2,7 +2,7 @@ import type { User } from "../../../types/user.type";
 
 type UpdateUserEmailType = Pick<User.Create, "email">;
 
-export class UpdateUserEmail {
+export default class UpdateUserEmail {
 	email: string;
 }
 

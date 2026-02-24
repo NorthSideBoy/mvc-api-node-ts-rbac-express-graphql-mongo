@@ -1,4 +1,4 @@
-export interface Result {
+export default interface Result {
 	success: boolean;
 	affected: number;
 }

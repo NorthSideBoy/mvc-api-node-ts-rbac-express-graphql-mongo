@@ -1,6 +1,6 @@
-import type { Pagination } from "./pagination.dto";
+import type Pagination from "./pagination.dto";
 
-export interface Search<T> {
+export default interface Search<T> {
 	docs: T[];
 	pagination: Pagination;
 }

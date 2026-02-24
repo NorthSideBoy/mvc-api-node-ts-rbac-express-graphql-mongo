@@ -3,7 +3,7 @@ import type { User } from "../../../types/user.type";
 
 type QueryUsersType = User.Query;
 
-export class QueryUsers {
+export default class QueryUsers {
 	page?: number;
 	limit?: number;
 	sort?: string;

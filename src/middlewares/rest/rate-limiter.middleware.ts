@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
-import { env } from "../configs/env.config";
-import TooManyRequestsError from "../errors/http/to-many-requests.error";
+import { env } from "../../configs/env.config";
+import TooManyRequestsError from "../../errors/http/to-many-requests.error";
 
 export const generalLimiter = rateLimit({
 	windowMs: env.RATE_LIMIT.WINDOW * 60 * 1000,

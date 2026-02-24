@@ -15,7 +15,11 @@ export namespace User {
 		updatedAt: Date;
 	};
 
-	export type Create = Omit<Schema, "id" | "createdAt" | "updatedAt">;
+	export type Create = Omit<
+		Schema,
+		"id" | "createdAt" | "updatedAt" | "enable"
+	> &
+		Partial<Pick<Schema, "enable">>;
 
 	export type Query = Partial<Omit<User.Create, "birthday">> & {
 		birthdayFrom?: Date;

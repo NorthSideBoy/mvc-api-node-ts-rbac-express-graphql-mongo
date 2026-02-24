@@ -22,6 +22,6 @@
 	"routes": {
 		"routesDir": "src/routes",
 		"middleware": "express",
-		"authenticationModule": "src/middlewares/auth.middleware.ts"
+		"authenticationModule": "src/middlewares/rest/auth.middleware.ts"
 	}
 }
