@@ -7,9 +7,13 @@ RESTful API boilerplate implementing **MVC** + **RBAC (Role-Based Access Control
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 [![Repository](https://img.shields.io/badge/repository-GitHub-181717?logo=github&logoColor=white)](https://github.com/NorthSideBoy/mvc-rbac-api-node-express-ts-mongo)
 [![Node.js](https://img.shields.io/badge/node.js-LTS-339933?logo=nodedotjs&logoColor=white)](#tech-stack)
+[![Express](https://img.shields.io/badge/express-4.x-82cc2d?logo=express&logoColor=white)](#tech-stack)
 [![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)](#tech-stack)
+[![GraphQL](https://img.shields.io/badge/graphql-16.x-E10098?logo=graphql&logoColor=white)](#tech-stack)
 [![MongoDB](https://img.shields.io/badge/mongodb-8.x-47A248?logo=mongodb&logoColor=white)](#tech-stack)
+[![Docker](https://img.shields.io/badge/docker-24.x-2496ED?logo=docker&logoColor=white)](#tech-stack)
 [![Swagger](https://img.shields.io/badge/openapi-swagger-85EA2D?logo=swagger&logoColor=black)](#api-documentation)
+[![JWT](https://img.shields.io/badge/jwt-auth-000000?logo=jsonwebtokens&logoColor=white)](#authentication)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NorthSideBoy/mvc-rbac-api-node-express-ts-mongo)
 
 </div>
@@ -61,7 +65,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
       <br /><b>Node.js</b>
     </td>
     <td align="center" width="140">
-      <img src="https://cdn.simpleicons.org/express/000000" width="40" height="40" alt="Express" />
+      <img src="https://cdn.simpleicons.org/express/82cc2d" width="40" height="40" alt="Express" />
       <br /><b>Express</b>
     </td>
     <td align="center" width="140">
