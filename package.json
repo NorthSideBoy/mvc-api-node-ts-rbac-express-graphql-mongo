@@ -1,5 +1,5 @@
 {
-	"name": "mvc-rbac-api-node-express-ts-mongo",
+	"name": "mvc-api-node-ts-rbac-express-graphql-mongo",
 	"version": "1.0.0",
 	"description": "RESTful API RBAC boilerplate with Node.js, Express, TypeScript, TSOA, MongoDB and MVC pattern",
 	"type": "commonjs",
