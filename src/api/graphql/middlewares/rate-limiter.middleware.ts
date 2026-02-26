@@ -1,13 +1,13 @@
 import { RateLimiterMemory } from "rate-limiter-flexible";
 import type { MiddlewareFn } from "type-graphql";
-import { env } from "../../../configs/env.config";
+import { config } from "../../../configs/env.config";
 import TooManyRequestsError from "../../../errors/http/to-many-requests.error";
 import type { GraphQLContext } from "../../../types/graphql-context.type";
 
 const rateLimiter = new RateLimiterMemory({
 	points: 5,
-	duration: env.RATE_LIMIT.WINDOW * 60,
-	blockDuration: env.RATE_LIMIT.WINDOW * 60,
+	duration: config.rateLimit.max * 60,
+	blockDuration: config.rateLimit.windowMs * 60,
 });
 
 export function authLimiter(): MiddlewareFn<GraphQLContext> {

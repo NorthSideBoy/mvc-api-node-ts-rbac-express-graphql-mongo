@@ -14,18 +14,18 @@ import { errorMiddleware } from "./api/rest/middlewares/error.middleware";
 import { generalLimiter } from "./api/rest/middlewares/rate-limiter.middleware";
 import { RegisterRoutes } from "./api/rest/routes/routes";
 import { bootstrap, shutdown } from "./bootstrap";
-import { env } from "./configs/env.config";
+import { config } from "./configs/env.config";
 import type { GraphQLContext } from "./types/graphql-context.type";
 import { logger } from "./utils/logger.util";
 
 const app = express();
 
 app.use(
-	env.NODE_ENV === "production"
-		? pinoHttp({ logger: logger.raw, level: env.LOG_LEVEL })
+	config.server.isProduction
+		? pinoHttp({ logger: logger.raw, level: config.server.logLevel })
 		: (_req, _res, next) => next(),
 );
-app.use(cors({ origin: env.CORS.ORIGIN }));
+app.use(cors({ origin: config.cors.origin }));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(generalLimiter);
@@ -57,7 +57,7 @@ const start = async (): Promise<void> => {
 
 	app.use(
 		"/graphql",
-		cors<cors.CorsRequest>({ origin: env.CORS.ORIGIN }),
+		cors<cors.CorsRequest>({ origin: config.cors.origin }),
 		express.json(),
 		expressMiddleware(apollo, {
 			context: async ({ req, res }): Promise<GraphQLContext> => {
@@ -66,16 +66,18 @@ const start = async (): Promise<void> => {
 		}),
 	);
 
-	const server = app.listen(env.PORT, env.HOST, () => {
+	const server = app.listen(config.server.port, config.server.host, () => {
 		logger.info(
-			{ host: env.HOST, port: env.PORT, cors: env.CORS.ORIGIN },
+			{
+				host: config.server.host,
+				port: config.server.port,
+				cors: config.cors.origin,
+			},
 			"[HTTP] listening",
 		);
+		logger.info(`Swagger docs available at ${config.server.publicUrl}/docs`);
 		logger.info(
-			`Swagger docs available at http://${env.HOST}:${env.PORT}/docs`,
-		);
-		logger.info(
-			`GraphQL Playground available at http://${env.HOST}:${env.PORT}/graphql`,
+			`GraphQL Playground available at ${config.server.publicUrl}/graphql`,
 		);
 	});
 

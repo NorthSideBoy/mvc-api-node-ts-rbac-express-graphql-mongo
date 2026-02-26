@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
 import { logger } from "../utils/logger.util";
-import { env } from "./env.config";
+import { config } from "./env.config";
 
 export const Database = {
 	async connect(): Promise<void> {
 		try {
-			await mongoose.connect(env.DB.URL.PUBLIC);
+			await mongoose.connect(config.database.connection.uri);
 
-			logger.info({ URI: env.DB.URL.MASK }, "[MongoDB] connected");
+			logger.info(
+				{ URI: config.database.connection.maskedUri },
+				"[MongoDB] connected",
+			);
 		} catch (error) {
 			logger.error("[MongoDB] connection error");
 			throw error;

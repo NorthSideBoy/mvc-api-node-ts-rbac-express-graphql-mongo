@@ -1,10 +1,10 @@
 import rateLimit from "express-rate-limit";
-import { env } from "../../../configs/env.config";
+import { config } from "../../../configs/env.config";
 import TooManyRequestsError from "../../../errors/http/to-many-requests.error";
 
 export const generalLimiter = rateLimit({
-	windowMs: env.RATE_LIMIT.WINDOW * 60 * 1000,
-	max: env.RATE_LIMIT.MAX,
+	windowMs: config.rateLimit.windowMs * 60 * 1000,
+	max: config.rateLimit.windowMs,
 	standardHeaders: true,
 	legacyHeaders: false,
 	handler: () => {
@@ -15,7 +15,7 @@ export const generalLimiter = rateLimit({
 });
 
 export const authLimiter = rateLimit({
-	windowMs: env.RATE_LIMIT.WINDOW * 60 * 1000,
+	windowMs: config.rateLimit.windowMs * 60 * 1000,
 	max: 5,
 	skipSuccessfulRequests: true,
 	handler: () => {

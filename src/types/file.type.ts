@@ -11,6 +11,4 @@ export namespace File {
 		createdAt: Date;
 		updatedAt: Date;
 	};
-
-	export type Create = Pick<Schema, "name">;
 }

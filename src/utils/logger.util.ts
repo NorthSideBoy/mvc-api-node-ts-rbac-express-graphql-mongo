@@ -4,13 +4,11 @@ import pino, {
 	type LoggerOptions,
 	type Logger as PinoLogger,
 } from "pino";
-import { env } from "../configs/env.config";
-
-const isDev = env.NODE_ENV === "development";
+import { config } from "../configs/env.config";
 
 const baseOptions: LoggerOptions = {
-	level: env.LOG_LEVEL,
-	...(isDev
+	level: config.server.logLevel,
+	...(config.server.isDevelopment
 		? {
 				transport: {
 					target: "pino-pretty",

@@ -1,10 +1,10 @@
-import { env } from "./configs/env.config";
+import { config } from "./configs/env.config";
 import { Database } from "./configs/mongoose.config";
 import { logger } from "./utils/logger.util";
 
 export const bootstrap = async (): Promise<void> => {
 	logger.info(
-		{ mode: env.NODE_ENV, log_level: env.LOG_LEVEL },
+		{ mode: config.server.nodeEnv, log_level: config.server.logLevel },
 		"[APP] starting",
 	);
 	await Database.connect();

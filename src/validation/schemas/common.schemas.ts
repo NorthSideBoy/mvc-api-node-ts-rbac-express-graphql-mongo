@@ -1,5 +1,6 @@
 import moment from "moment";
 import z from "zod";
+import { Mimetype } from "../../enums/mimetype.enum";
 
 export const querySchema = {
 	boolean: z.preprocess((val) => {
@@ -43,5 +44,3 @@ export const dateSchema = z
 	.refine((date) => moment(date).isValid(), {
 		message: "Invalid date value",
 	});
-
-export const fileSchema = z.file();
