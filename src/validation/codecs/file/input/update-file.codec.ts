@@ -2,7 +2,7 @@ import z from "zod";
 import { CreateFileCodec } from "./create-file.codec";
 
 export const UpdateFileCodec = z
-	.object(CreateFileCodec.optional())
+	.object(CreateFileCodec.shape)
 	.partial()
 	.strict()
 	.refine(

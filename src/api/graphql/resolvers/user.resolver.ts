@@ -110,6 +110,7 @@ export default class UserResolver {
 		const userService = new UserService(ctx.context);
 		const result = await userService.create(data);
 		const gql = mapper.toClass(UserGQL, result);
+
 		return gql;
 	}
 

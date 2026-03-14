@@ -4,6 +4,7 @@ import { ApolloServerPluginLandingPageLocalDefault } from "@apollo/server/plugin
 import { expressMiddleware } from "@as-integrations/express5";
 import cors from "cors";
 import express from "express";
+import graphqlUploadExpress from "graphql-upload/graphqlUploadExpress.mjs";
 import { pinoHttp } from "pino-http";
 import swaggerUi from "swagger-ui-express";
 import { buildSchema } from "type-graphql";
@@ -59,6 +60,7 @@ const start = async (): Promise<void> => {
 	app.use(
 		"/graphql",
 		cors<cors.CorsRequest>({ origin: config.cors.origin }),
+		graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
 		express.json(),
 		expressMiddleware(apollo, {
 			context: async ({ req, res }): Promise<GraphQLContext> => {
@@ -96,7 +98,6 @@ const start = async (): Promise<void> => {
 };
 
 start().catch((error) => {
-	console.log(error);
 	logger.error("Failed to start server:", error);
 	process.exit(1);
 });

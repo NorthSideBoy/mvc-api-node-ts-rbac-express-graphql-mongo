@@ -3,7 +3,7 @@ import type { CreateUser } from "../../../../../DTOs/user/input/create-user.dto"
 import { Role } from "../../../../../enums/role.enum";
 
 @InputType("CreateUser")
-export default class CreateUserGQL implements CreateUser {
+export default class CreateUserGQL implements Omit<CreateUser, "picture"> {
 	@Field()
 	firstname!: string;
 

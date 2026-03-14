@@ -5,6 +5,7 @@ import type { ReadFile } from "../DTOs/storage/input/read-file.dto";
 import type { SaveFile } from "../DTOs/storage/input/save-file.dto";
 import { ApplicationError } from "../errors/core/application-error";
 import FileNotFoundError from "../errors/file/file-not-found.error";
+import { extToMimetype } from "../mappers/mimetype.mapper";
 import { file as fileUtil } from "../utils/file.util";
 import { decode } from "../utils/validator.util";
 import { overwriteFileCodec } from "../validation/codecs/storage/input/overwrite-file.codec";
@@ -50,16 +51,19 @@ export default class StorageService extends BaseService {
 	private async createFileFromBuffer(
 		fullPath: string,
 		buffer: Buffer,
+		type: string,
 	): Promise<File> {
 		const uint8Array = new Uint8Array(buffer);
-		return new File([uint8Array], path.basename(fullPath));
+		return new File([uint8Array], path.basename(fullPath), { type });
 	}
 
 	private async readFileAsFile(fullPath: string): Promise<File> {
 		const exists = await this.fileExists(fullPath);
 		if (!exists) throw new FileNotFoundError(`File not found at: ${fullPath}`);
 		const buffer = await fs.readFile(fullPath);
-		return this.createFileFromBuffer(fullPath, buffer);
+		const extension = path.extname(fullPath).slice(1);
+		const mimetype = extToMimetype(extension);
+		return this.createFileFromBuffer(fullPath, buffer, mimetype);
 	}
 
 	async read(input: ReadFile): Promise<File> {
@@ -81,7 +85,7 @@ export default class StorageService extends BaseService {
 		await this.checkDirectory(fullPath);
 		const buffer = await fileUtil.buffer(decoded.file);
 		await fs.writeFile(fullPath, buffer);
-		return this.readFileAsFile(fullPath);
+		return await this.readFileAsFile(fullPath);
 	}
 
 	async overwrite(input: OverwriteFile): Promise<File> {
@@ -101,7 +105,7 @@ export default class StorageService extends BaseService {
 			: oldFullPath;
 		if (shouldRename) await fs.rename(oldFullPath, finalPath);
 		await fs.writeFile(finalPath, await fileUtil.buffer(decoded.file));
-		return this.readFileAsFile(finalPath);
+		return await this.readFileAsFile(finalPath);
 	}
 
 	async delete(filepath: string, filename: string): Promise<void> {

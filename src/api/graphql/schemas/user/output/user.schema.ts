@@ -1,4 +1,5 @@
 import { Field, ID, ObjectType, registerEnumType } from "type-graphql";
+import type { User } from "../../../../../DTOs/user/output/user.dto";
 import { Role } from "../../../../../enums/role.enum";
 import FileGQL from "../../file/output/file.schema";
 
@@ -8,7 +9,7 @@ registerEnumType(Role, {
 });
 
 @ObjectType("User")
-export default class UserGQL {
+export default class UserGQL implements User {
 	@Field(() => ID)
 	id!: string;
 
