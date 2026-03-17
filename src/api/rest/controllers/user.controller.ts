@@ -305,9 +305,9 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updatePicture(
 		@Path() id: string,
-		@UploadedFile() file: Express.Multer.File,
+		@UploadedFile() upload: Express.Multer.File,
 	): Promise<Result> {
-		const input = { picture: this.handleUpload(file) };
+		const input = { picture: this.handleUpload(upload) };
 		return await this.userService.updatePicture(id, input);
 	}
 
