@@ -7,9 +7,9 @@ import {
 	verify,
 } from "jsonwebtoken";
 import { config } from "../configs/env.config";
-import { TokenBeforeError as AppTokenBeforeError } from "../errors/token/token-before.error";
-import { TokenExpiredError as AppTokenExpiredError } from "../errors/token/token-expired.error";
-import { TokenTamperedError as AppTokenTamperedError } from "../errors/token/token-tampered.error";
+import { TokenBeforeError as AppTokenBeforeError } from "../errors/application/token-before.error";
+import { TokenExpiredError as AppTokenExpiredError } from "../errors/application/token-expired.error";
+import { TokenTamperedError as AppTokenTamperedError } from "../errors/application/token-tampered.error";
 import type { Token } from "../types/token.type";
 
 class Tokenizer {

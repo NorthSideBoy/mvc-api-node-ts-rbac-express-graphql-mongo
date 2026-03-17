@@ -3,9 +3,9 @@ import { context } from "../src/context/context.handler";
 import type ExecutionContext from "../src/context/execution-context";
 import type { CreateUser as DTO } from "../src/DTOs/user/input/create-user.dto";
 import { Role } from "../src/enums/role.enum";
-import { parseSchema } from "../src/helpers/parse-schema.helper";
 import UserService from "../src/services/user.service";
 import { logger } from "../src/utils/logger.util";
+import { schema } from "../src/utils/schema.util";
 import { dateSchema } from "../src/validation/schemas/common.schemas";
 import {
 	emailSchema,
@@ -39,22 +39,22 @@ export default class CreateUser implements Script {
 
 		data.firstname = await input({
 			message: "Enter user's firstname:",
-			validate: parseSchema(firstnameSchema),
+			validate: schema.parse(firstnameSchema),
 		});
 
 		data.lastname = await input({
 			message: "Enter user's lastname:",
-			validate: parseSchema(lastnameSchema),
+			validate: schema.parse(lastnameSchema),
 		});
 
 		data.username = await input({
 			message: "Enter user's username:",
-			validate: parseSchema(usernameSchema),
+			validate: schema.parse(usernameSchema),
 		});
 
 		data.email = await input({
 			message: "Enter user's email:",
-			validate: parseSchema(emailSchema),
+			validate: schema.parse(emailSchema),
 		});
 
 		data.role = await select({
@@ -65,13 +65,13 @@ export default class CreateUser implements Script {
 
 		data.birthday = (await input({
 			message: "Enter user's birthday:",
-			validate: parseSchema(dateSchema),
+			validate: schema.parse(dateSchema),
 		})) as unknown as Date;
 
 		const password1 = await password({
 			message: "Enter user's password:",
 			mask: true,
-			validate: parseSchema(passwordSchema),
+			validate: schema.parse(passwordSchema),
 		});
 
 		await password({

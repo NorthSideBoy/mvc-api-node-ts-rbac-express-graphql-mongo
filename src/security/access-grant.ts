@@ -1,6 +1,6 @@
 import type { Role } from "../enums/role.enum";
-import { PermissionDeniedError } from "../errors/authorization/permission-denied.error";
-import { UserDisabledError } from "../errors/user/user-disabled.error";
+import { PermissionDeniedError } from "../errors/application/permission-denied.error";
+import { UserDisabledError } from "../errors/application/user-disabled.error";
 import type { AccessClaims } from "./access-claims";
 import type { UserActor } from "./actor";
 

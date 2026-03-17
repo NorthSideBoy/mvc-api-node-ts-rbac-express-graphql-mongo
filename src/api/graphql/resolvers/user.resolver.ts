@@ -14,17 +14,12 @@ import type { GraphQLContext } from "../../../types/graphql-context.type";
 import { mapper } from "../../../utils/mapper.util";
 import { authGuard } from "../middlewares/auth.middleware";
 import { contextMiddleware } from "../middlewares/context.middleware";
-import { authLimiter } from "../middlewares/rate-limiter.middleware";
 import PaginationGQL from "../schemas/common/pagination.schema";
 import ResultGQL from "../schemas/operation/output/result.schema";
 // biome-ignore lint: GQL schemas should not be type
 import CreateUserGQL from "../schemas/user/input/create-user.schema";
 // biome-ignore lint: GQL schemas should not be type
-import LoginUserGQL from "../schemas/user/input/login-user.schema";
-// biome-ignore lint: GQL schemas should not be type
 import QueryUsersGQL from "../schemas/user/input/query-users.schema";
-// biome-ignore lint: GQL schemas should not be type
-import RegisterUserGQL from "../schemas/user/input/register-user.schema";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserEmailGQL from "../schemas/user/input/update-user-email.schema";
 // biome-ignore lint: GQL schemas should not be type
@@ -37,66 +32,12 @@ import UpdateUserRoleGQL from "../schemas/user/input/update-user-role.schema";
 import UpdateUserStatusGQL from "../schemas/user/input/update-user-status.scehma";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserUsernameGQL from "../schemas/user/input/update-user-username.schema";
-import AuthenticatedUserGQL from "../schemas/user/output/authenticated-user.schema";
 import UserGQL from "../schemas/user/output/user.schema";
 import UsersSearchGQL from "../schemas/user/output/users-search.schema";
 import BaseResolver from "./base.resolver";
 
 @Resolver()
 export default class UserResolver extends BaseResolver {
-	@Mutation(() => AuthenticatedUserGQL)
-	async register(
-		@Arg("data") data: RegisterUserGQL,
-		@Arg("upload", () => GraphQLUpload) upload: Promise<FileUpload>,
-	): Promise<AuthenticatedUserGQL> {
-		const picture = await this.handleUpload(upload);
-		const userService = new UserService();
-		const result = await userService.register(Object.assign({ picture }, data));
-		const gql = mapper.toClass(AuthenticatedUserGQL, result);
-
-		return gql;
-	}
-
-	@Mutation(() => AuthenticatedUserGQL)
-	@UseMiddleware(authLimiter())
-	async login(@Arg("data") data: LoginUserGQL): Promise<AuthenticatedUserGQL> {
-		const userService = new UserService();
-		const result = await userService.login(data);
-		const gql = mapper.toClass(AuthenticatedUserGQL, result);
-
-		return gql;
-	}
-
-	@Mutation(() => UserGQL)
-	@UseMiddleware([authGuard("Bearer", [Role.MANAGER]), contextMiddleware()])
-	async create(
-		@Ctx() ctx: GraphQLContext,
-		@Arg("data") data: CreateUserGQL,
-		@Arg("upload", () => GraphQLUpload) upload: Promise<FileUpload>,
-	): Promise<UserGQL> {
-		const picture = await this.handleUpload(upload);
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.create(Object.assign({ picture }, data));
-		const gql = mapper.toClass(UserGQL, result);
-
-		return gql;
-	}
-
-	@Query(() => UsersSearchGQL)
-	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
-	async search(
-		@Ctx() ctx: GraphQLContext,
-		@Arg("query", { nullable: true }) query?: QueryUsersGQL,
-	): Promise<UsersSearchGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.search(query ?? {});
-		const docs = result.docs.map((item) => mapper.toClass(UserGQL, item));
-		const pagination = mapper.toClass(PaginationGQL, result.pagination);
-		const gql = mapper.toClass(UsersSearchGQL, { docs, pagination });
-
-		return gql;
-	}
-
 	@Query(() => UserGQL, { nullable: true })
 	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
 	async findById(
@@ -117,6 +58,36 @@ export default class UserResolver extends BaseResolver {
 		const userService = new UserService(ctx.req.context);
 		const result = await userService.findAll();
 		const gql = result.map((item) => mapper.toClass(UserGQL, item));
+
+		return gql;
+	}
+
+	@Query(() => UsersSearchGQL)
+	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
+	async search(
+		@Ctx() ctx: GraphQLContext,
+		@Arg("query", { nullable: true }) query?: QueryUsersGQL,
+	): Promise<UsersSearchGQL> {
+		const userService = new UserService(ctx.req.context);
+		const result = await userService.search(query ?? {});
+		const docs = result.docs.map((item) => mapper.toClass(UserGQL, item));
+		const pagination = mapper.toClass(PaginationGQL, result.pagination);
+		const gql = mapper.toClass(UsersSearchGQL, { docs, pagination });
+
+		return gql;
+	}
+
+	@Mutation(() => UserGQL)
+	@UseMiddleware([authGuard("Bearer", [Role.MANAGER]), contextMiddleware()])
+	async create(
+		@Ctx() ctx: GraphQLContext,
+		@Arg("data") data: CreateUserGQL,
+		@Arg("upload", () => GraphQLUpload) upload: Promise<FileUpload>,
+	): Promise<UserGQL> {
+		const picture = await this.handleUpload(upload);
+		const userService = new UserService(ctx.req.context);
+		const result = await userService.create(Object.assign({ picture }, data));
+		const gql = mapper.toClass(UserGQL, result);
 
 		return gql;
 	}

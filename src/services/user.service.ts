@@ -1,11 +1,7 @@
 import { result } from "../builders/result.builder";
-import type { CreateFile } from "../DTOs/file/input/create-file.dto";
-import type { File as FileDTO } from "../DTOs/file/output/file.dto";
 import type Result from "../DTOs/operation/output/result.dto";
 import type { CreateUser } from "../DTOs/user/input/create-user.dto";
-import type { LoginUser } from "../DTOs/user/input/login-user.dto";
 import type { QueryUsers } from "../DTOs/user/input/query-users.dto";
-import type { RegisterUser } from "../DTOs/user/input/register-user.dto";
 import type { UpdateUserEmail } from "../DTOs/user/input/update-user-email.dto";
 import type { UpdateUserPassword } from "../DTOs/user/input/update-user-password.dto";
 import type { UpdateUserPicture } from "../DTOs/user/input/update-user-picture.dto";
@@ -13,25 +9,21 @@ import type { UpdateUserProfile } from "../DTOs/user/input/update-user-profile.d
 import type { UpdateUserRole } from "../DTOs/user/input/update-user-role.dto";
 import type { UpdateUserStatus } from "../DTOs/user/input/update-user-status.dto";
 import type { UpdateUserUsername } from "../DTOs/user/input/update-user-username.dto";
-import type { AuthenticatedUser } from "../DTOs/user/output/authenticated-user.dto";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import type { UsersSearch } from "../DTOs/user/output/users-search";
-import { DuplicatePasswordError } from "../errors/user/duplicate-password.error";
-import { EmailInUseError } from "../errors/user/email-in-use.error";
-import { InvalidUserCredentialsError } from "../errors/user/invalid-user-credentials.error";
-import { UserNotFoundError } from "../errors/user/user-not-found.error";
-import { UsernameInUseError } from "../errors/user/username-in-use.error";
+import { DuplicatePasswordError } from "../errors/application/duplicate-password.error";
+import { EmailInUseError } from "../errors/application/email-in-use.error";
+import { UserNotFoundError } from "../errors/application/user-not-found.error";
+import { UsernameInUseError } from "../errors/application/username-in-use.error";
+import UserHelper from "../helpers/user.helper";
 import { extToMimetype } from "../mappers/mimetype.mapper";
 import { roleToRBACRole, updateRoleToRole } from "../mappers/role.mapper";
 import User from "../models/user.model";
 import { OPERATIONS } from "../rbac/constants/operations.constant";
 import Actor from "../rbac/models/actor.model";
 import { file as fileUtil } from "../utils/file.util";
-import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
 import { createUserCodec } from "../validation/codecs/user/input/create-user.codec";
-import { loginUserCodec } from "../validation/codecs/user/input/login-user.codec";
-import { registerUserCodec } from "../validation/codecs/user/input/register-user.codec";
 import { searchUsersCodec } from "../validation/codecs/user/input/search-users.codec";
 import { updateUserEmailCodec } from "../validation/codecs/user/input/update-user-email.codec";
 import { updateUserPasswordCodec } from "../validation/codecs/user/input/update-user-password.codec";
@@ -45,10 +37,9 @@ import FileService from "./file.service";
 import StorageService from "./storage.service";
 
 export default class UserService extends BaseService {
-	private readonly DEFAULT_USER_PICTURE_FILENAME = "default.jpeg";
-	private readonly USER_PICTURE_PATH = "public/user";
-	private readonly fileService = new FileService();
 	private readonly storage = new StorageService();
+	private readonly fileService = new FileService();
+	private readonly userHelper = new UserHelper();
 
 	private async getUserByIdOrThrow(id: string) {
 		const user = await User.findById(id);
@@ -57,103 +48,12 @@ export default class UserService extends BaseService {
 		return user;
 	}
 
-	private async validateUserUniqueness(
-		input: RegisterUser | CreateUser,
-		excludeId?: string,
-	): Promise<void> {
-		const [isEmailAvailable, isUsernameAvailable] = await Promise.all([
-			User.isEmailAvailable(input.email, excludeId),
-			User.isUsernameAvailable(input.username, excludeId),
-		]);
-		if (!isEmailAvailable) throw new EmailInUseError(input.email);
-		if (!isUsernameAvailable) throw new UsernameInUseError(input.username);
-	}
-
-	private async findDefaultPicture(): Promise<FileDTO | null> {
-		return this.fileService.findByFilename(this.DEFAULT_USER_PICTURE_FILENAME);
-	}
-
-	private async createDefaultPicture(): Promise<FileDTO> {
-		const defaultImage = await this.storage.read({
-			filename: this.DEFAULT_USER_PICTURE_FILENAME,
-			filepath: this.USER_PICTURE_PATH,
-		});
-		const extension = fileUtil.ext(defaultImage);
-
-		return this.fileService.create({
-			alt: "Default user profile picture",
-			filename: this.DEFAULT_USER_PICTURE_FILENAME,
-			size: defaultImage.size,
-			mimetype: extToMimetype(extension),
-			path: this.USER_PICTURE_PATH,
-			ext: extension,
-		});
-	}
-
-	private async getDefaultPictureId(): Promise<string> {
-		const existingPicture = await this.findDefaultPicture();
-		if (existingPicture) return existingPicture.id;
-		const defaultPicture = await this.createDefaultPicture();
-
-		return defaultPicture.id;
-	}
-
-	private async saveUserPicture(file: File): Promise<CreateFile> {
-		const saved = await this.storage.save({
-			file,
-			filepath: this.USER_PICTURE_PATH,
-		});
-		const extension = fileUtil.ext(saved);
-
-		return {
-			alt: "User profile picture",
-			filename: saved.name,
-			size: saved.size,
-			mimetype: extToMimetype(extension),
-			path: this.USER_PICTURE_PATH,
-			ext: extension,
-		};
-	}
-
-	private async processUserPicture(file?: File): Promise<string> {
-		if (!file) return this.getDefaultPictureId();
-		const pictureData = await this.saveUserPicture(file);
-		const created = await this.fileService.create(pictureData);
-
-		return created.id;
-	}
-
-	private toAuthenticated(user: DTO, token: string): AuthenticatedUser {
-		return { ...user, token };
-	}
-
-	async register(input: RegisterUser | unknown): Promise<AuthenticatedUser> {
-		const decoded = decode<RegisterUser>(registerUserCodec, input);
-		await this.validateUserUniqueness(decoded);
-		const pictureId = await this.processUserPicture(decoded.picture);
-		const user = await User.create({ ...decoded, picture: pictureId });
-		const token = tokenizer.sign(user.sign);
-
-		return this.toAuthenticated(user.dto(), token);
-	}
-
-	async login(input: LoginUser | unknown): Promise<AuthenticatedUser> {
-		const decoded = decode<LoginUser>(loginUserCodec, input);
-		const user = await User.findByEmail(decoded.email);
-		if (!user) throw new InvalidUserCredentialsError();
-		const isValid = await user.comparePassword(decoded.password);
-		if (!isValid) throw new InvalidUserCredentialsError();
-		const token = tokenizer.sign(user.sign);
-
-		return this.toAuthenticated(user.dto(), token);
-	}
-
 	async create(input: CreateUser | unknown): Promise<DTO> {
 		const decoded = decode<CreateUser>(createUserCodec, input);
 		this.canManage(OPERATIONS.USER_CREATE, Actor.dummy(decoded.role));
 		this.canAssign(decoded.role);
-		await this.validateUserUniqueness(decoded);
-		const pictureId = await this.processUserPicture(decoded.picture);
+		await this.userHelper.validateUserUniqueness(decoded);
+		const pictureId = await this.userHelper.processUserPicture(decoded.picture);
 		const user = await User.create({ ...decoded, picture: pictureId });
 
 		return user.dto();
@@ -277,10 +177,10 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_PICTURE, user);
 		const picture = user.dto().picture;
-		const hasDefaultPicture =
-			picture.filename === this.DEFAULT_USER_PICTURE_FILENAME;
-		if (hasDefaultPicture) {
-			const newPictureId = await this.processUserPicture(decoded.picture);
+		if (this.userHelper.isDefaultPicture(picture.filename)) {
+			const newPictureId = await this.userHelper.processUserPicture(
+				decoded.picture,
+			);
 			const operation = await User.updateOne(
 				{ _id: id },
 				{ picture: newPictureId },
@@ -308,7 +208,7 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_DELETE, user);
 		const picture = user.dto().picture;
-		if (picture.filename !== this.DEFAULT_USER_PICTURE_FILENAME)
+		if (!this.userHelper.isDefaultPicture(picture.filename))
 			await Promise.all([
 				this.fileService.delete(picture.id),
 				this.storage.delete(picture.path, picture.filename),
@@ -322,14 +222,12 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_DELETE_PICTURE, user);
 		const picture = user.dto().picture;
-		const hasDefaultPicture =
-			picture.filename === this.DEFAULT_USER_PICTURE_FILENAME;
-		if (hasDefaultPicture) return result(0);
+		if (this.userHelper.isDefaultPicture(picture.filename)) return result(0);
 		await Promise.all([
 			this.fileService.delete(picture.id),
 			this.storage.delete(picture.path, picture.filename),
 		]);
-		const defaultPictureId = await this.getDefaultPictureId();
+		const defaultPictureId = await this.userHelper.getDefaultPictureId();
 		const operation = await User.updateOne(
 			{ _id: id },
 			{ picture: defaultPictureId },

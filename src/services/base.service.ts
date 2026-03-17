@@ -1,6 +1,6 @@
 import { context } from "../context/context.handler";
 import type ExecutionContext from "../context/execution-context";
-import { PermissionDeniedError } from "../errors/authorization/permission-denied.error";
+import { PermissionDeniedError } from "../errors/application/permission-denied.error";
 import type { IActor, Role } from "../rbac";
 import type { Operation } from "../rbac/types/operation.type";
 
