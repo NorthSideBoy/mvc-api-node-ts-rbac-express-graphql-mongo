@@ -1,4 +1,5 @@
 import type { Model, Schema } from "mongoose";
+import { isDate } from "node:util/types";
 
 const filterableFieldsMap = new Map<
   string,
@@ -99,7 +100,7 @@ interface Result<T> {
 export interface PaginateModel<T> extends Model<T> {
   paginate: (
     query?: any,
-    options?: { page?: number; limit?: number; sort?: Record<string, 1 | -1>, lean?:boolean },
+    options?: { page?: number; limit?: number; sort?: Record<string, 1 | -1>, lean?: boolean },
   ) => Promise<Result<T>>;
   buildFilters(input: Record<string, any>): Record<string, any>;
   getPaginationOptions(options?: any): { page: number; limit: number; sort: SortSpec };
@@ -186,7 +187,7 @@ export class QueryBuilder {
         const value = input[config.dtoField];
         if (value === undefined || value === null) continue;
 
-        if (value instanceof Date) {
+        if (isDate(value)) {
           filters[config.field] = value;
         } else if (typeof value === "string" && value.includes("*")) {
           const pattern = value.replace(/\*/g, ".*");

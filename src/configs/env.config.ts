@@ -42,6 +42,8 @@ const envSchema = z.object({
 	// Rate Limiting Configuration
 	RATE_LIMIT_WINDOW: toNumber().default(15),
 	RATE_LIMIT_MAX: toNumber().default(500),
+
+	MAX_FILE_SIZE: toNumber().default(5),
 });
 
 const parsed = envSchema.safeParse(process.env);
@@ -107,8 +109,11 @@ export const config = Object.freeze({
 		origin: env.CORS_ORIGIN,
 	},
 	rateLimit: {
-		windowMs: env.RATE_LIMIT_WINDOW, // Convert minutes to milliseconds
+		windowMs: env.RATE_LIMIT_WINDOW,
 		max: env.RATE_LIMIT_MAX,
+	},
+	file: {
+		max_size: env.MAX_FILE_SIZE,
 	},
 } as const);
 

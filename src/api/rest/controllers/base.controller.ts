@@ -1,13 +1,12 @@
 import { Controller } from "tsoa";
+import { makeFile } from "../../../factories/file.factory";
 
 export class BaseController extends Controller {
-	protected handleFile(file?: Express.Multer.File): File | undefined {
+	protected handleUpload(file?: Express.Multer.File): File | undefined {
 		if (!file) return undefined;
-		const uint8Array = new Uint8Array(file.buffer);
-		const native = new File([uint8Array], file.originalname, {
+		return makeFile(file.buffer, file.originalname, {
 			type: file.mimetype,
 			lastModified: Date.now(),
 		});
-		return native;
 	}
 }

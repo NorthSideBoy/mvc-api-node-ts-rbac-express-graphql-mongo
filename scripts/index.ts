@@ -1,8 +1,8 @@
 import { setTimeout } from "node:timers/promises";
-import { ZodError } from "zod";
 import { bootstrap, shutdown } from "../src/bootstrap";
 import { context } from "../src/context/context.handler";
 import ExecutionContext from "../src/context/execution-context";
+import { isError, isZodError } from "../src/guards/error.guard";
 import { logger } from "../src/utils/logger.util";
 import CreateUser from "./create-user.script";
 import type Script from "./script";
@@ -69,7 +69,7 @@ async function main(): Promise<void> {
 		await shutdown();
 		process.exit(0);
 	} catch (error) {
-		if (error instanceof ZodError) {
+		if (isZodError(error)) {
 			error.message = error.issues
 				.map((i) =>
 					i.path.length > 0
@@ -80,7 +80,7 @@ async function main(): Promise<void> {
 		}
 		logger.error(
 			{ error },
-			`[Script] ${name} ${error instanceof Error ? error.name : "UnexpectedError"}`,
+			`[Script] ${name} ${isError(error) ? error.name : "UnexpectedError"}`,
 		);
 		process.exit(1);
 	}

@@ -15,6 +15,7 @@ import type { UpdateUserStatus } from "../DTOs/user/input/update-user-status.dto
 import type { UpdateUserUsername } from "../DTOs/user/input/update-user-username.dto";
 import type { AuthenticatedUser } from "../DTOs/user/output/authenticated-user.dto";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
+import type { UsersSearch } from "../DTOs/user/output/users-search";
 import { DuplicatePasswordError } from "../errors/user/duplicate-password.error";
 import { EmailInUseError } from "../errors/user/email-in-use.error";
 import { InvalidUserCredentialsError } from "../errors/user/invalid-user-credentials.error";
@@ -25,7 +26,6 @@ import { roleToRBACRole, updateRoleToRole } from "../mappers/role.mapper";
 import User from "../models/user.model";
 import { OPERATIONS } from "../rbac/constants/operations.constant";
 import Actor from "../rbac/models/actor.model";
-import type Search from "../types/search.type";
 import { file as fileUtil } from "../utils/file.util";
 import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
@@ -53,6 +53,7 @@ export default class UserService extends BaseService {
 	private async getUserByIdOrThrow(id: string) {
 		const user = await User.findById(id);
 		if (!user) throw new UserNotFoundError();
+
 		return user;
 	}
 
@@ -78,6 +79,7 @@ export default class UserService extends BaseService {
 			filepath: this.USER_PICTURE_PATH,
 		});
 		const extension = fileUtil.ext(defaultImage);
+
 		return this.fileService.create({
 			alt: "Default user profile picture",
 			filename: this.DEFAULT_USER_PICTURE_FILENAME,
@@ -92,6 +94,7 @@ export default class UserService extends BaseService {
 		const existingPicture = await this.findDefaultPicture();
 		if (existingPicture) return existingPicture.id;
 		const defaultPicture = await this.createDefaultPicture();
+
 		return defaultPicture.id;
 	}
 
@@ -101,6 +104,7 @@ export default class UserService extends BaseService {
 			filepath: this.USER_PICTURE_PATH,
 		});
 		const extension = fileUtil.ext(saved);
+
 		return {
 			alt: "User profile picture",
 			filename: saved.name,
@@ -115,6 +119,7 @@ export default class UserService extends BaseService {
 		if (!file) return this.getDefaultPictureId();
 		const pictureData = await this.saveUserPicture(file);
 		const created = await this.fileService.create(pictureData);
+
 		return created.id;
 	}
 
@@ -128,6 +133,7 @@ export default class UserService extends BaseService {
 		const pictureId = await this.processUserPicture(decoded.picture);
 		const user = await User.create({ ...decoded, picture: pictureId });
 		const token = tokenizer.sign(user.sign);
+
 		return this.toAuthenticated(user.dto(), token);
 	}
 
@@ -138,6 +144,7 @@ export default class UserService extends BaseService {
 		const isValid = await user.comparePassword(decoded.password);
 		if (!isValid) throw new InvalidUserCredentialsError();
 		const token = tokenizer.sign(user.sign);
+
 		return this.toAuthenticated(user.dto(), token);
 	}
 
@@ -148,6 +155,7 @@ export default class UserService extends BaseService {
 		await this.validateUserUniqueness(decoded);
 		const pictureId = await this.processUserPicture(decoded.picture);
 		const user = await User.create({ ...decoded, picture: pictureId });
+
 		return user.dto();
 	}
 
@@ -155,19 +163,22 @@ export default class UserService extends BaseService {
 		this.can(OPERATIONS.USER_READ);
 		const user = await User.findById(id);
 		if (!user) return null;
+
 		return user.dto();
 	}
 
 	async findAll(): Promise<DTO[]> {
 		this.can(OPERATIONS.USER_READ);
 		const users = await User.find();
+
 		return users.map((user) => user.dto());
 	}
 
-	async search(input: QueryUsers): Promise<Search<DTO>> {
+	async search(input: QueryUsers | unknown): Promise<UsersSearch> {
 		const decoded = decode<QueryUsers>(searchUsersCodec, input);
 		this.can(OPERATIONS.USER_READ);
 		const result = await User.search(decoded);
+
 		return {
 			docs: result.docs.map((user) => user.dto()),
 			pagination: result.pagination,
@@ -182,6 +193,7 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_PROFILE, user);
 		const operation = await User.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -193,6 +205,7 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_STATUS, user);
 		const operation = await User.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -207,6 +220,7 @@ export default class UserService extends BaseService {
 		const rbacRole = roleToRBACRole(role);
 		this.canAssign(rbacRole);
 		const operation = await User.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -220,6 +234,7 @@ export default class UserService extends BaseService {
 		const isSamePassword = await user.comparePassword(decoded.password);
 		if (isSamePassword) throw new DuplicatePasswordError();
 		const operation = await User.updatePassword(id, decoded.password);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -233,6 +248,7 @@ export default class UserService extends BaseService {
 		const isEmailAvailable = await User.isEmailAvailable(decoded.email, id);
 		if (!isEmailAvailable) throw new EmailInUseError(decoded.email);
 		const operation = await User.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -249,6 +265,7 @@ export default class UserService extends BaseService {
 		);
 		if (!isUsernameAvailable) throw new UsernameInUseError(decoded.username);
 		const operation = await User.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
@@ -262,7 +279,6 @@ export default class UserService extends BaseService {
 		const picture = user.dto().picture;
 		const hasDefaultPicture =
 			picture.filename === this.DEFAULT_USER_PICTURE_FILENAME;
-
 		if (hasDefaultPicture) {
 			const newPictureId = await this.processUserPicture(decoded.picture);
 			const operation = await User.updateOne(
@@ -279,6 +295,7 @@ export default class UserService extends BaseService {
 		const ext = fileUtil.ext(overwritten);
 		const size = overwritten.size;
 		const mimetype = extToMimetype(ext);
+
 		return this.fileService.update(picture.id, {
 			filename: overwritten.name,
 			ext,
@@ -297,6 +314,7 @@ export default class UserService extends BaseService {
 				this.storage.delete(picture.path, picture.filename),
 			]);
 		const operation = await User.deleteOne({ _id: id });
+
 		return result(operation.deletedCount);
 	}
 
@@ -316,6 +334,7 @@ export default class UserService extends BaseService {
 			{ _id: id },
 			{ picture: defaultPictureId },
 		);
+
 		return result(operation.modifiedCount);
 	}
 }

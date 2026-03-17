@@ -1,3 +1,4 @@
+import { isDate } from "node:util/types";
 import moment from "moment";
 import { ObjectId } from "mongodb";
 import z from "zod";
@@ -49,7 +50,7 @@ export const dateSchema = z
 		z.date(),
 	])
 	.transform((val) => {
-		if (val instanceof Date) {
+		if (isDate(val)) {
 			if (Number.isNaN(val.getTime())) throw new Error("Invalid date value");
 			return val;
 		}

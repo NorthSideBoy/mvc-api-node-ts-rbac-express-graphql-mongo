@@ -2,7 +2,7 @@ import { Field, InputType } from "type-graphql";
 import type { RegisterUser } from "../../../../../DTOs/user/input/register-user.dto";
 
 @InputType("RegisterUser")
-export default class RegisterUserGQL implements RegisterUser {
+export default class RegisterUserGQL implements Omit<RegisterUser, "picture"> {
 	@Field()
 	firstname!: string;
 

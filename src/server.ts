@@ -11,13 +11,17 @@ import { buildSchema } from "type-graphql";
 import { formatGraphQLError } from "./api/graphql/middlewares/error.middleware";
 import UserResolver from "./api/graphql/resolvers/user.resolver";
 import swaggerDocument from "./api/rest/docs/swagger.json";
+import { expressAuthentication } from "./api/rest/middlewares/auth.middleware";
 import { errorMiddleware } from "./api/rest/middlewares/error.middleware";
 import { generalLimiter } from "./api/rest/middlewares/rate-limiter.middleware";
 import { RegisterRoutes } from "./api/rest/routes/routes";
 import { bootstrap, shutdown } from "./bootstrap";
 import { config } from "./configs/env.config";
+import { Role } from "./enums/role.enum";
 import type { GraphQLContext } from "./types/graphql-context.type";
 import { logger } from "./utils/logger.util";
+
+const maxFileSize = config.file.max_size * 1024 * 1024;
 
 const app = express();
 
@@ -27,10 +31,19 @@ app.use(
 		: (_req, _res, next) => next(),
 );
 app.use(cors({ origin: config.cors.origin }));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static("storage"));
+app.use(express.json({ limit: maxFileSize }));
+app.use(express.urlencoded({ extended: true, limit: maxFileSize }));
 app.use(generalLimiter);
+
+app.use("/public", express.static("storage/public"));
+app.use(
+	"/private",
+	async (req, _res, next) => {
+		await expressAuthentication(req, "Bearer", [Role.ADMIN]);
+		next();
+	},
+	express.static("storage/private"),
+);
 
 app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get("/swagger.json", (_request, response) => {
@@ -46,7 +59,6 @@ const start = async (): Promise<void> => {
 
 	const schema = await buildSchema({
 		resolvers: [UserResolver],
-		validate: false,
 	});
 
 	const apollo = new ApolloServer<GraphQLContext>({
@@ -59,9 +71,7 @@ const start = async (): Promise<void> => {
 
 	app.use(
 		"/graphql",
-		cors<cors.CorsRequest>({ origin: config.cors.origin }),
-		graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }),
-		express.json(),
+		graphqlUploadExpress({ maxFileSize }),
 		expressMiddleware(apollo, {
 			context: async ({ req, res }): Promise<GraphQLContext> => {
 				return { req, res };

@@ -1,8 +1,7 @@
 import type { Role } from "../../enums/role.enum";
-import { ApplicationError } from "../../errors/core/application-error";
-import HttpError from "../../errors/core/http.error";
 import MethodNotAllowedError from "../../errors/http/method-not-allowed.error";
 import UnauthorizedError from "../../errors/http/unauthorized.error";
+import { isApplicationError, isHttpError } from "../../guards/error.guard";
 import { AccessClaims } from "../../security/access-claims";
 import { AccessGrant } from "../../security/access-grant";
 import { tokenizer } from "../../utils/tokenizer.util";
@@ -45,8 +44,7 @@ export async function authorize(
 
 		return await strategy(authorization, allowed);
 	} catch (error) {
-		if (error instanceof HttpError || error instanceof ApplicationError)
-			throw error;
+		if (isHttpError(error) || isApplicationError(error)) throw error;
 
 		throw new UnauthorizedError("Authentication failed");
 	}

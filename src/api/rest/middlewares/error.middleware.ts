@@ -1,9 +1,13 @@
 import type { ErrorRequestHandler } from "express";
-import { ZodError } from "zod";
 import { ApplicationErrorCode } from "../../../enums/application-error-code.enum";
 import { HttpErrorCode } from "../../../enums/http-error-code.enum";
-import { ApplicationError } from "../../../errors/core/application-error";
-import HttpError from "../../../errors/core/http.error";
+import {
+	isApplicationError,
+	isError,
+	isHttpError,
+	isSyntaxError,
+	isZodError,
+} from "../../../guards/error.guard";
 import { logger } from "../../../utils/logger.util";
 
 export const errorMiddleware: ErrorRequestHandler = (
@@ -12,7 +16,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 	response,
 	next,
 ) => {
-	if (error instanceof ZodError) {
+	if (isZodError(error)) {
 		logger.error({ error }, "[HTTP] validation error");
 		const message = error.issues
 			.map((i) =>
@@ -28,7 +32,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 		});
 	}
 
-	if (error instanceof HttpError) {
+	if (isHttpError(error)) {
 		logger.error({ error }, "[HTTP] expected error");
 		return response.status(error.status).json({
 			message: error.message,
@@ -36,10 +40,11 @@ export const errorMiddleware: ErrorRequestHandler = (
 		});
 	}
 
-	if (error instanceof ApplicationError) {
+	if (isApplicationError(error)) {
 		logger.error({ error }, "[HTTP] application error");
 		const statusMap: Record<string, number> = {
 			[ApplicationErrorCode.UserNotFound]: 404,
+			[ApplicationErrorCode.FileNotFound]: 404,
 			[ApplicationErrorCode.EmailInUse]: 409,
 			[ApplicationErrorCode.UsernameInUse]: 409,
 			[ApplicationErrorCode.InvalidCredentials]: 401,
@@ -60,7 +65,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 		});
 	}
 
-	if (error instanceof SyntaxError) {
+	if (isSyntaxError(error)) {
 		logger.error({ error }, "[HTTP] syntax error");
 		return response.status(400).json({
 			message: error.message,
@@ -68,9 +73,8 @@ export const errorMiddleware: ErrorRequestHandler = (
 		});
 	}
 
-	if (error instanceof Error) {
+	if (isError(error)) {
 		logger.error({ error }, "[HTTP] unexpected error");
-		console.log(error);
 		return response.status(500).json({
 			message: "Internal server error",
 			code: HttpErrorCode.InternalError,

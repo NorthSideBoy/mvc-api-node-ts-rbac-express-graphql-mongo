@@ -3,8 +3,9 @@ import path from "node:path";
 import type { OverwriteFile } from "../DTOs/storage/input/overwrite-file.dto";
 import type { ReadFile } from "../DTOs/storage/input/read-file.dto";
 import type { SaveFile } from "../DTOs/storage/input/save-file.dto";
-import { ApplicationError } from "../errors/core/application-error";
 import FileNotFoundError from "../errors/file/file-not-found.error";
+import { makeFile } from "../factories/file.factory";
+import { isApplicationError } from "../guards/error.guard";
 import { extToMimetype } from "../mappers/mimetype.mapper";
 import { file as fileUtil } from "../utils/file.util";
 import { decode } from "../utils/validator.util";
@@ -23,6 +24,7 @@ export default class StorageService extends BaseService {
 	private async fileExists(fullPath: string): Promise<boolean> {
 		try {
 			await fs.access(fullPath);
+
 			return true;
 		} catch {
 			return false;
@@ -32,6 +34,7 @@ export default class StorageService extends BaseService {
 	private async directoryExists(dirPath: string): Promise<boolean> {
 		try {
 			const stats = await fs.stat(dirPath);
+
 			return stats.isDirectory();
 		} catch {
 			return false;
@@ -40,39 +43,36 @@ export default class StorageService extends BaseService {
 
 	private async ensureDirectoryExists(dirPath: string): Promise<void> {
 		const exists = await this.directoryExists(dirPath);
+
 		if (!exists) await fs.mkdir(dirPath, { recursive: true });
 	}
 
 	private async checkDirectory(fullPath: string): Promise<void> {
 		const dirPath = path.dirname(fullPath);
+
 		await this.ensureDirectoryExists(dirPath);
 	}
 
-	private async createFileFromBuffer(
-		fullPath: string,
-		buffer: Buffer,
-		type: string,
-	): Promise<File> {
-		const uint8Array = new Uint8Array(buffer);
-		return new File([uint8Array], path.basename(fullPath), { type });
-	}
-
-	private async readFileAsFile(fullPath: string): Promise<File> {
+	private async readFile(fullPath: string): Promise<File> {
 		const exists = await this.fileExists(fullPath);
 		if (!exists) throw new FileNotFoundError(`File not found at: ${fullPath}`);
 		const buffer = await fs.readFile(fullPath);
 		const extension = path.extname(fullPath).slice(1);
 		const mimetype = extToMimetype(extension);
-		return this.createFileFromBuffer(fullPath, buffer, mimetype);
+
+		return makeFile(buffer, path.basename(fullPath), {
+			type: mimetype,
+			lastModified: Date.now(),
+		});
 	}
 
 	async read(input: ReadFile): Promise<File> {
 		const decoded = decode<ReadFile>(readFileCodec, input);
 		const fullPath = this.getFullPath(decoded.filepath, decoded.filename);
 		try {
-			return await this.readFileAsFile(fullPath);
+			return await this.readFile(fullPath);
 		} catch (error) {
-			if (error instanceof ApplicationError) throw error;
+			if (isApplicationError(error)) throw error;
 			throw new FileNotFoundError(`Error reading file at: ${fullPath}`);
 		}
 	}
@@ -85,7 +85,8 @@ export default class StorageService extends BaseService {
 		await this.checkDirectory(fullPath);
 		const buffer = await fileUtil.buffer(decoded.file);
 		await fs.writeFile(fullPath, buffer);
-		return await this.readFileAsFile(fullPath);
+
+		return await this.readFile(fullPath);
 	}
 
 	async overwrite(input: OverwriteFile): Promise<File> {
@@ -105,7 +106,8 @@ export default class StorageService extends BaseService {
 			: oldFullPath;
 		if (shouldRename) await fs.rename(oldFullPath, finalPath);
 		await fs.writeFile(finalPath, await fileUtil.buffer(decoded.file));
-		return await this.readFileAsFile(finalPath);
+
+		return await this.readFile(finalPath);
 	}
 
 	async delete(filepath: string, filename: string): Promise<void> {
@@ -115,6 +117,7 @@ export default class StorageService extends BaseService {
 			throw new FileNotFoundError(
 				`Cannot delete: File not found at: ${fullPath}`,
 			);
+
 		await fs.unlink(fullPath);
 	}
 }

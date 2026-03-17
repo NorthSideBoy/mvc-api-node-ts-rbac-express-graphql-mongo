@@ -65,7 +65,7 @@ export class UserController extends BaseController {
 			password,
 			birthday,
 			enable,
-			picture: this.handleFile(upload),
+			picture: this.handleUpload(upload),
 		});
 	}
 
@@ -162,7 +162,7 @@ export class UserController extends BaseController {
 			role,
 			birthday,
 			enable,
-			picture: this.handleFile(upload),
+			picture: this.handleUpload(upload),
 		});
 	}
 
@@ -307,7 +307,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@UploadedFile() file: Express.Multer.File,
 	): Promise<Result> {
-		const input = { picture: this.handleFile(file) };
+		const input = { picture: this.handleUpload(file) };
 		return await this.userService.updatePicture(id, input);
 	}
 

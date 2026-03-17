@@ -13,22 +13,26 @@ export default class FileService extends BaseService {
 	async create(input: CreateFile): Promise<DTO> {
 		const decoded = decode<CreateFile>(CreateFileCodec, input);
 		const file = await File.create(decoded);
+
 		return file.dto();
 	}
 
 	async findByFilename(filename: string): Promise<DTO | null> {
 		const file = await File.findByFilename(filename);
+
 		return file?.dto() || null;
 	}
 
 	async update(id: string, input: UpdateFile): Promise<Result> {
 		const decoded = decode<UpdateFile>(UpdateFileCodec, input);
 		const operation = await File.updateOne({ _id: id }, decoded);
+
 		return result(operation.modifiedCount);
 	}
 
 	async delete(id: string): Promise<Result> {
 		const operation = await File.deleteOne({ _id: id });
+
 		return result(operation.deletedCount);
 	}
 }

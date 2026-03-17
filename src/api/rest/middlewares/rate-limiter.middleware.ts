@@ -12,6 +12,17 @@ export const generalLimiter = rateLimit({
 			"Too many attempts, please try again later.",
 		);
 	},
+	skip: (req) => {
+		if (req.path === "/graphql" && req.method === "POST") {
+			if (req.body?.query) {
+				const query = req.body.query;
+				return (
+					query.includes("__schema") || query.includes("IntrospectionQuery")
+				);
+			}
+		}
+		return false;
+	},
 });
 
 export const authLimiter = rateLimit({

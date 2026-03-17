@@ -1,10 +1,10 @@
 import { confirm, input, password, select } from "@inquirer/prompts";
 import { context } from "../src/context/context.handler";
 import type ExecutionContext from "../src/context/execution-context";
+import type { CreateUser as DTO } from "../src/DTOs/user/input/create-user.dto";
 import { Role } from "../src/enums/role.enum";
 import { parseSchema } from "../src/helpers/parse-schema.helper";
 import UserService from "../src/services/user.service";
-import type { User } from "../src/types/user.type";
 import { logger } from "../src/utils/logger.util";
 import { dateSchema } from "../src/validation/schemas/common.schemas";
 import {
@@ -29,7 +29,7 @@ export default class CreateUser implements Script {
 	}
 
 	async run(): Promise<void> {
-		const data: Partial<User.Create> = { enable: true };
+		const data: Partial<DTO> = { enable: true };
 
 		const answer = await confirm({
 			message: "Do you want to create a user account?",
@@ -41,27 +41,33 @@ export default class CreateUser implements Script {
 			message: "Enter user's firstname:",
 			validate: parseSchema(firstnameSchema),
 		});
+
 		data.lastname = await input({
 			message: "Enter user's lastname:",
 			validate: parseSchema(lastnameSchema),
 		});
+
 		data.username = await input({
 			message: "Enter user's username:",
 			validate: parseSchema(usernameSchema),
 		});
+
 		data.email = await input({
 			message: "Enter user's email:",
 			validate: parseSchema(emailSchema),
 		});
+
 		data.role = await select({
 			message: "Select user's role:",
 			choices: Object.values(Role),
-			default: Role.USER,
+			default: Role.ADMIN,
 		});
+
 		data.birthday = (await input({
 			message: "Enter user's birthday:",
 			validate: parseSchema(dateSchema),
 		})) as unknown as Date;
+
 		const password1 = await password({
 			message: "Enter user's password:",
 			mask: true,
