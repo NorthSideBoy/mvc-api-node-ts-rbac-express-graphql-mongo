@@ -1,6 +1,4 @@
 import { confirm, input, password, select } from "@inquirer/prompts";
-import { context } from "../src/context/context.handler";
-import type ExecutionContext from "../src/context/execution-context";
 import type { CreateUser as DTO } from "../src/DTOs/user/input/create-user.dto";
 import { Role } from "../src/enums/role.enum";
 import UserService from "../src/services/user.service";
@@ -14,15 +12,11 @@ import {
 	passwordSchema,
 	usernameSchema,
 } from "../src/validation/schemas/user.schemas";
-import type Script from "./script";
+import BaseScript from "./base.script.ts";
 
-export default class CreateUser implements Script {
+export default class CreateUser extends BaseScript {
 	readonly name = "create-user";
 	readonly description = "Create a user";
-
-	get ctx(): ExecutionContext {
-		return context.get();
-	}
 
 	get userService(): UserService {
 		return new UserService();

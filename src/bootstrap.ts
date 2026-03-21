@@ -1,5 +1,6 @@
 import { config } from "./configs/env.config";
-import { Database } from "./configs/mongoose.config";
+import { database } from "./configs/mongoose.config";
+import { listeners } from "./listeners";
 import { logger } from "./utils/logger.util";
 
 export const bootstrap = async (): Promise<void> => {
@@ -7,10 +8,12 @@ export const bootstrap = async (): Promise<void> => {
 		{ mode: config.server.nodeEnv, log_level: config.server.logLevel },
 		"[APP] starting",
 	);
-	await Database.connect();
+	await database.connect();
+	listeners.initialize();
 };
 
 export const shutdown = async (): Promise<void> => {
-	await Database.disconnect();
+	await database.disconnect();
+	listeners.shutdown();
 	logger.info("[APP] stopped");
 };

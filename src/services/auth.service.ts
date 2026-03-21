@@ -3,6 +3,7 @@ import type { RegisterUser } from "../DTOs/auth/input/register-user.dto";
 import type { AuthenticatedUser } from "../DTOs/auth/output/authenticated-user.dto";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import { InvalidUserCredentialsError } from "../errors/application/invalid-user-credentials.error";
+import { EVENTS } from "../events/constants/events.conts";
 import UserHelper from "../helpers/user.helper";
 import User from "../models/user.model";
 import { tokenizer } from "../utils/tokenizer.util";
@@ -35,7 +36,12 @@ export default class AuthService extends BaseService {
 		const isValid = await user.comparePassword(decoded.password);
 		if (!isValid) throw new InvalidUserCredentialsError();
 		const token = tokenizer.sign(user.sign);
+		const authenticated = this.toAuthenticated(user.dto(), token);
+		this.emit(EVENTS.AUTH_USER_LOGGED_IN, {
+			id: authenticated.id,
+			token: authenticated.token,
+		});
 
-		return this.toAuthenticated(user.dto(), token);
+		return authenticated;
 	}
 }

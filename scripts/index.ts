@@ -1,11 +1,11 @@
 import { setTimeout } from "node:timers/promises";
 import { bootstrap, shutdown } from "../src/bootstrap";
-import { context } from "../src/context/context.handler";
 import ExecutionContext from "../src/context/execution-context";
 import { isError, isZodError } from "../src/guards/error.guard";
+import { context } from "../src/utils/context.util";
 import { logger } from "../src/utils/logger.util";
+import type Script from "./base.script.ts";
 import CreateUser from "./create-user.script";
-import type Script from "./script";
 import Test from "./test.script";
 
 type ScriptFactory = () => Script;

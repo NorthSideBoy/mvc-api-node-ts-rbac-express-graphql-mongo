@@ -1,19 +1,33 @@
-import { type IActor, Kind } from "../contracts/actor.contract";
+import { Kind } from "../enums/kind.enum";
 import { Role } from "../rbac/enums/role.enum";
 import { default as RBACActor } from "../rbac/models/actor.model";
 import type { AccessClaims } from "./access-claims";
-export class UserActor extends RBACActor implements IActor {
+
+export default abstract class BaseActor extends RBACActor {
+	abstract readonly kind: Kind;
+
+	protected constructor(
+		id: string,
+		role: Role,
+		public readonly username: string,
+		public readonly enable: boolean,
+	) {
+		super(id, role);
+	}
+}
+
+export class UserActor extends BaseActor {
 	readonly kind = Kind.USER;
 
 	private constructor(
-		public readonly id: string,
-		public readonly username: string,
-		public readonly role: Role,
-		public readonly enable: boolean,
+		id: string,
+		username: string,
+		role: Role,
+		enable: boolean,
 		public readonly issuedAt: number,
 		public readonly expiresAt: number,
 	) {
-		super(id, role);
+		super(id, role, username, enable);
 	}
 
 	static fromClaims(claims: AccessClaims): UserActor {
@@ -33,34 +47,29 @@ export class UserActor extends RBACActor implements IActor {
 	}
 }
 
-export class AnonymousActor extends RBACActor implements IActor {
+export class AnonymousActor extends BaseActor {
 	readonly kind = Kind.ANONYMOUS;
-	readonly username = "anonymous";
-	readonly enable = true;
-	readonly sessionId: string;
 
 	constructor(sessionId?: string) {
-		const id = sessionId || crypto.randomUUID();
-		super(id, Role.ANONYMOUS);
-		this.sessionId = id;
+		super(
+			sessionId || crypto.randomUUID(),
+			Role.ANONYMOUS,
+			Kind.ANONYMOUS,
+			true,
+		);
 	}
 }
 
-export class SystemActor extends RBACActor implements IActor {
+class SystemActor extends BaseActor {
 	readonly kind = Kind.SYSTEM;
-	readonly username = "system";
-	readonly enable = true;
 
-	private static instance: SystemActor;
-
-	constructor() {
-		const id = process.pid.toString();
-		super(id, Role.JOKER);
+	private constructor() {
+		super(process.pid.toString(), Role.JOKER, Kind.SYSTEM, true);
 	}
 
-	static getInstance(): SystemActor {
-		if (!SystemActor.instance) SystemActor.instance = new SystemActor();
-
-		return SystemActor.instance;
+	static create(): SystemActor {
+		return new SystemActor();
 	}
 }
+
+export const systemActor = SystemActor.create();

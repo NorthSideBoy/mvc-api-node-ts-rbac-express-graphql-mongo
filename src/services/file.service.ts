@@ -10,17 +10,23 @@ import { UpdateFileCodec } from "../validation/codecs/file/input/update-file.cod
 import BaseService from "./base.service";
 
 export default class FileService extends BaseService {
-	async create(input: CreateFile): Promise<DTO> {
-		const decoded = decode<CreateFile>(CreateFileCodec, input);
-		const file = await File.create(decoded);
+	async findById(id: string): Promise<DTO | null> {
+		const file = await File.findById({ _id: id });
 
-		return file.dto();
+		return file?.dto() || null;
 	}
 
 	async findByFilename(filename: string): Promise<DTO | null> {
 		const file = await File.findByFilename(filename);
 
 		return file?.dto() || null;
+	}
+
+	async create(input: CreateFile): Promise<DTO> {
+		const decoded = decode<CreateFile>(CreateFileCodec, input);
+		const file = await File.create(decoded);
+
+		return file.dto();
 	}
 
 	async update(id: string, input: UpdateFile): Promise<Result> {

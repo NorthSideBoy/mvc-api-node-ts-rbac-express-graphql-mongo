@@ -15,6 +15,7 @@ import { DuplicatePasswordError } from "../errors/application/duplicate-password
 import { EmailInUseError } from "../errors/application/email-in-use.error";
 import { UserNotFoundError } from "../errors/application/user-not-found.error";
 import { UsernameInUseError } from "../errors/application/username-in-use.error";
+import { EVENTS } from "../events/constants/events.conts";
 import UserHelper from "../helpers/user.helper";
 import { extToMimetype } from "../mappers/mimetype.mapper";
 import { roleToRBACRole, updateRoleToRole } from "../mappers/role.mapper";
@@ -55,6 +56,11 @@ export default class UserService extends BaseService {
 		await this.userHelper.validateUserUniqueness(decoded);
 		const pictureId = await this.userHelper.processUserPicture(decoded.picture);
 		const user = await User.create({ ...decoded, picture: pictureId });
+		this.emit(EVENTS.USER_CREATED, {
+			id: user.id,
+			username: user.username,
+			role: user.role,
+		});
 
 		return user.dto();
 	}
@@ -196,12 +202,14 @@ export default class UserService extends BaseService {
 		const size = overwritten.size;
 		const mimetype = extToMimetype(ext);
 
-		return this.fileService.update(picture.id, {
+		const operation = await this.fileService.update(picture.id, {
 			filename: overwritten.name,
 			ext,
 			size,
 			mimetype,
 		});
+
+		return operation;
 	}
 
 	async delete(id: string): Promise<Result> {

@@ -1,9 +1,9 @@
-import { context } from "../src/context/context.handler";
 import type ExecutionContext from "../src/context/execution-context";
+import { context } from "../src/utils/context.util";
 import { logger } from "../src/utils/logger.util";
-import type Script from "./script";
+import BaseScript from "./base.script";
 
-export default class Test implements Script {
+export default class Test extends BaseScript {
 	readonly name = "test";
 	readonly description = "Print hello world";
 

@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { logger } from "../utils/logger.util";
 import { config } from "./env.config";
 
-export const Database = {
+export const database = {
 	async connect(): Promise<void> {
 		try {
 			await mongoose.connect(config.database.connection.uri);

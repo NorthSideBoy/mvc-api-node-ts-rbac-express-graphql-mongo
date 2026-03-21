@@ -10,6 +10,10 @@ export default class Actor implements IActor {
 		private readonly policy: RolePolicy = RolePolicy.create(),
 	) {}
 
+	get audit(): IActor {
+		return { id: this.id, role: this.role };
+	}
+
 	static dummy(role: Role): IActor {
 		return new Actor("dummy", role);
 	}

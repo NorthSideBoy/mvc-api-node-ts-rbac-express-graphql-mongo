@@ -1,5 +1,5 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import ExecutionContext from "./execution-context";
+import ExecutionContext from "../context/execution-context";
 
 const storage = new AsyncLocalStorage<ExecutionContext>();
 
