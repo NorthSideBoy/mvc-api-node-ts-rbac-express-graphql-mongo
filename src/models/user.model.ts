@@ -28,7 +28,6 @@ type UserModelType = ReturnModelType<typeof User, BeAnObject>;
 
 @modelOptions({
 	schemaOptions: {
-		versionKey: false,
 		toJSON: {
 			virtuals: true,
 			getters: true,

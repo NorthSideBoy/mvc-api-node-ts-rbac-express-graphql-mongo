@@ -21,7 +21,6 @@ import { fileCodec } from "../validation/codecs/file/output/file.codec";
 
 @modelOptions({
 	schemaOptions: {
-		versionKey: false,
 		toJSON: {
 			virtuals: true,
 			getters: true,

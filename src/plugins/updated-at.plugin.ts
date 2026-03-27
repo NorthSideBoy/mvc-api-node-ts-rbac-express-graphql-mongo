@@ -7,6 +7,7 @@ export function updatedAtPlugin(schema: Schema) {
 			const doc = await this.model.findOne(query);
 			if (doc) {
 				doc.updatedAt = new Date();
+				doc.increment();
 				await doc.save();
 			}
 		}
@@ -15,7 +16,10 @@ export function updatedAtPlugin(schema: Schema) {
 	schema.post("updateMany", async function (res: UpdateResult) {
 		if (res.modifiedCount) {
 			const query = this.getQuery();
-			await this.model.updateMany(query, { $set: { updatedAt: new Date() } });
+			await this.model.updateMany(query, {
+				$set: { updatedAt: new Date() },
+				$inc: { __v: 1 },
+			});
 		}
 	});
 }

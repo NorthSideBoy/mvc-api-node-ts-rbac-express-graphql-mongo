@@ -11,8 +11,7 @@
 			"**",
 			"!dist",
 			"!src/api/rest/routes",
-			"!src/api/rest/docs",
-			"!src/plugins/paginated-query.plugin.ts"
+			"!src/api/rest/docs"
 		]
 	},
 	"formatter": {
