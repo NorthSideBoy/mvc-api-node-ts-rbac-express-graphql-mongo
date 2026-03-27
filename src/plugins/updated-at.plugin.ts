@@ -14,8 +14,7 @@ export function updatedAtPlugin(schema: Schema) {
 
 	schema.post("updateMany", async function (res: UpdateResult) {
 		if (res.modifiedCount) {
-			// biome-ignore lint/suspicious/noExplicitAny: getQuery() returns a complex type
-			const query = this.getQuery() as any;
+			const query = this.getQuery();
 			await this.model.updateMany(query, { $set: { updatedAt: new Date() } });
 		}
 	});
