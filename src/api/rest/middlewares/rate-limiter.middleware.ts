@@ -1,6 +1,6 @@
 import rateLimit from "express-rate-limit";
 import { config } from "../../../configs/env.config";
-import TooManyRequestsError from "../../../errors/http/to-many-requests.error";
+import TooManyRequestsError from "../../../errors/http/too-many-requests.error";
 
 export const generalLimiter = rateLimit({
 	windowMs: config.rateLimit.windowMs * 60 * 1000,
@@ -8,9 +8,7 @@ export const generalLimiter = rateLimit({
 	standardHeaders: true,
 	legacyHeaders: false,
 	handler: () => {
-		throw new TooManyRequestsError(
-			"Too many attempts, please try again later.",
-		);
+		throw new TooManyRequestsError();
 	},
 	skip: (req) => {
 		if (req.path === "/graphql" && req.method === "POST") {
@@ -30,8 +28,6 @@ export const authLimiter = rateLimit({
 	max: 5,
 	skipSuccessfulRequests: true,
 	handler: () => {
-		throw new TooManyRequestsError(
-			"Too many attempts, please try again later.",
-		);
+		throw new TooManyRequestsError();
 	},
 });

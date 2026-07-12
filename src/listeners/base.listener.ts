@@ -13,16 +13,28 @@ export abstract class BaseListener {
 		name: K,
 		handler: (event: Event<K>, context: ExecutionContext) => Promise<void>,
 	): void {
-		const unsubscribe = eventBus.subscribe(name, async (event, context) => {
-			try {
-				logger.info(`[EventBus] processing event: ${String(name)}`);
-				await handler(event, context);
-				logger.info(`[EventBus] successfully processed event: ${String(name)}`);
-			} catch (error) {
-				logger.error(`[EventBus] error processing event: ${String(name)}`);
-				throw error;
-			}
-		});
+		const unsubscribe = eventBus.subscribe(
+			name,
+			async (event, context) => {
+				try {
+					await handler(event, context);
+				} catch (error) {
+					logger.error(
+						{
+							error,
+							event: {
+								id: event.payload.id,
+								name: event.name,
+								source: event.source,
+							},
+							actor: context.actor.audit,
+						},
+						`[EventBus] error processing event: ${String(name)}`,
+					);
+				}
+			},
+			{ type: "listener" },
+		);
 		this.unsubscribers.push(unsubscribe);
 		this.counter++;
 	}

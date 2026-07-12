@@ -1,20 +1,18 @@
 import { Field, InputType } from "type-graphql";
 import type { CreateUser } from "../../../../../DTOs/user/input/create-user.dto";
-import { Role } from "../../../../../enums/role.enum";
+import { UpdateRole } from "../../../../../enums/role.enum";
+import PersonGQL from "../../common/person.schema";
 
 @InputType("CreateUser")
-export default class CreateUserGQL implements Omit<CreateUser, "picture"> {
-	@Field()
-	firstname!: string;
-
-	@Field()
-	lastname!: string;
-
+export default class CreateUserGQL
+	extends PersonGQL
+	implements Omit<CreateUser, "picture" | "role">
+{
 	@Field()
 	username!: string;
 
-	@Field(() => Role)
-	role!: Role;
+	@Field(() => UpdateRole)
+	role!: UpdateRole;
 
 	@Field()
 	password!: string;

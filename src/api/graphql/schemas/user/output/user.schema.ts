@@ -1,6 +1,7 @@
 import { Field, ID, ObjectType, registerEnumType } from "type-graphql";
 import type { User } from "../../../../../DTOs/user/output/user.dto";
 import { Role } from "../../../../../enums/role.enum";
+import PersonGQL from "../../common/person.schema";
 import FileGQL from "../../file/output/file.schema";
 
 registerEnumType(Role, {
@@ -9,15 +10,9 @@ registerEnumType(Role, {
 });
 
 @ObjectType("User")
-export default class UserGQL implements User {
+export default class UserGQL extends PersonGQL implements User {
 	@Field(() => ID)
 	id!: string;
-
-	@Field()
-	firstname!: string;
-
-	@Field()
-	lastname!: string;
 
 	@Field()
 	username!: string;

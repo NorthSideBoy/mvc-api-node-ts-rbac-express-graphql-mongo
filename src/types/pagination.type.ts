@@ -1,8 +1,4 @@
-export default interface Pagination {
-	page: number;
-	limit: number;
-	total: number;
-	pages: number;
-	hasNext: boolean;
-	hasPrev: boolean;
-}
+import type { z } from "zod";
+import type { paginationCodec } from "../validation/codecs/common/pagination.codec";
+
+export type Pagination = z.infer<typeof paginationCodec>;

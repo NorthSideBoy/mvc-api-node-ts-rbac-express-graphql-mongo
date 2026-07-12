@@ -1,7 +1,7 @@
 import type { Server, Socket } from "socket.io";
 import { logger } from "../../../utils/logger.util";
 import type { BaseGateway } from "./base.gateway";
-import UserGateway from "./user.gateway";
+import UserRoomGateway from "./user-room.gateway";
 
 const items: BaseGateway[] = [];
 
@@ -11,7 +11,7 @@ export const gateways = {
 			logger.info("[Socket.IO] gateways already initialized");
 			return items.length;
 		}
-		items.push(new UserGateway(io));
+		items.push(new UserRoomGateway(io));
 		logger.info(`[Socket.IO] gateways initialized: ${items.length}`);
 		return items.length;
 	},

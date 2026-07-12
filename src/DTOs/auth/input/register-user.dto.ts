@@ -1,3 +1,4 @@
-import type { CreateUser } from "../../user/input/create-user.dto";
+import type { input } from "zod";
+import type { registerUserCodec } from "../../../validation/codecs/auth/input/register-user.codec";
 
-export type RegisterUser = Omit<CreateUser, "role">;
+export type RegisterUser = input<typeof registerUserCodec>;

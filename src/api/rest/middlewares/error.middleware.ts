@@ -47,6 +47,7 @@ export const errorMiddleware: ErrorRequestHandler = (
 			[ApplicationErrorCode.FileNotFound]: 404,
 			[ApplicationErrorCode.EmailInUse]: 409,
 			[ApplicationErrorCode.UsernameInUse]: 409,
+			[ApplicationErrorCode.DocumentReferenced]: 409,
 			[ApplicationErrorCode.InvalidCredentials]: 401,
 			[ApplicationErrorCode.PermissionDenied]: 403,
 			[ApplicationErrorCode.DuplicatePassword]: 409,

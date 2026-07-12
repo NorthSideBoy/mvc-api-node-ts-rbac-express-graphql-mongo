@@ -3,7 +3,7 @@ import type { RegisterUser } from "../DTOs/auth/input/register-user.dto";
 import type { AuthenticatedUser } from "../DTOs/auth/output/authenticated-user.dto";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import { InvalidUserCredentialsError } from "../errors/application/invalid-user-credentials.error";
-import { EVENTS } from "../events/constants/events.conts";
+import { EVENTS } from "../events/constants/events.constants";
 import UserHelper from "../helpers/user.helper";
 import User from "../models/user.model";
 import { tokenizer } from "../utils/tokenizer.util";
@@ -12,6 +12,10 @@ import { loginUserCodec } from "../validation/codecs/auth/input/login-user.codec
 import { registerUserCodec } from "../validation/codecs/auth/input/register-user.codec";
 import BaseService from "./base.service";
 
+type AuthEventMetadata = {
+	ip: string;
+};
+
 export default class AuthService extends BaseService {
 	private readonly userHelper = new UserHelper();
 
@@ -19,18 +23,25 @@ export default class AuthService extends BaseService {
 		return { ...user, token };
 	}
 
-	async register(input: RegisterUser | unknown): Promise<AuthenticatedUser> {
-		const decoded = decode<RegisterUser>(registerUserCodec, input);
-		await this.userHelper.validateUserUniqueness(decoded);
-		const pictureId = await this.userHelper.processUserPicture(decoded.picture);
-		const user = await User.create({ ...decoded, picture: pictureId });
+	async register(
+		input: RegisterUser,
+		metadata: AuthEventMetadata,
+	): Promise<AuthenticatedUser> {
+		const decoded = decode(registerUserCodec, input);
+		const user = await this.userHelper.create(decoded);
 		const token = tokenizer.sign(user.sign);
+		this.emit(EVENTS.AUTH.ACCOUNT_REGISTERED, {
+			data: { id: user.id, email: user.email, ip: metadata.ip },
+		});
 
 		return this.toAuthenticated(user.dto(), token);
 	}
 
-	async login(input: LoginUser | unknown): Promise<AuthenticatedUser> {
-		const decoded = decode<LoginUser>(loginUserCodec, input);
+	async login(
+		input: LoginUser,
+		metadata: AuthEventMetadata,
+	): Promise<AuthenticatedUser> {
+		const decoded = decode(loginUserCodec, input);
 		const user = await User.findByEmail(decoded.email);
 		if (!user) throw new InvalidUserCredentialsError();
 		const isValid = await user.comparePassword(decoded.password);
@@ -38,8 +49,7 @@ export default class AuthService extends BaseService {
 		const token = tokenizer.sign(user.sign);
 		const authenticated = this.toAuthenticated(user.dto(), token);
 		this.emit(EVENTS.AUTH.ACCOUNT_LOGGED_IN, {
-			id: authenticated.id,
-			token: authenticated.token,
+			data: { id: user.id, email: user.email, ip: metadata.ip },
 		});
 
 		return authenticated;

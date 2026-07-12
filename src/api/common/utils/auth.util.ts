@@ -16,7 +16,6 @@ const authStrategies = new Map<string, AuthStrategy>([
 		"Bearer",
 		async (authHeader, allowed) => {
 			const token = extractBearerToken(authHeader);
-			("");
 			if (!token) throw new UnauthorizedError("Invalid Bearer token format");
 
 			const payload = tokenizer.verify(token);

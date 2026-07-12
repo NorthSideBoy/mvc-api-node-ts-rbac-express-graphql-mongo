@@ -1,7 +1,4 @@
-import type { IFile } from "../../../contracts/file.contract";
-import type { FileVisibility } from "../../../enums/file-visibility.enum";
+import type { input } from "zod";
+import type { createFileCodec } from "../../../validation/codecs/file/input/create-file.codec";
 
-export type CreateFile = Omit<
-	IFile,
-	"id" | "createdAt" | "updatedAt" | "visibility"
-> & { visibility?: FileVisibility };
+export type CreateFile = input<typeof createFileCodec>;

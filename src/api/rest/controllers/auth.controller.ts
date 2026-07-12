@@ -3,6 +3,7 @@ import {
 	FormField,
 	Middlewares,
 	Post,
+	Request,
 	Response,
 	Route,
 	SuccessResponse,
@@ -12,6 +13,8 @@ import {
 import type { LoginUser } from "../../../DTOs/auth/input/login-user.dto";
 import type { AuthenticatedUser } from "../../../DTOs/auth/output/authenticated-user.dto";
 import AuthService from "../../../services/auth.service";
+import type { ExtendedRequest } from "../../common/types/extended-request.type";
+import { clientIp } from "../../common/utils/client-ip.util";
 import { authLimiter } from "../middlewares/rate-limiter.middleware";
 import { BaseController } from "./base.controller";
 
@@ -30,6 +33,7 @@ export class AuthController extends BaseController {
 	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	async register(
+		@Request() request: ExtendedRequest,
 		@FormField() firstname: string,
 		@FormField() lastname: string,
 		@FormField() username: string,
@@ -39,16 +43,19 @@ export class AuthController extends BaseController {
 		@FormField() enable?: boolean,
 		@UploadedFile() upload?: Express.Multer.File,
 	): Promise<AuthenticatedUser> {
-		return await this.authService.register({
-			firstname,
-			lastname,
-			username,
-			email,
-			password,
-			birthday,
-			enable,
-			picture: this.handleUpload(upload),
-		});
+		return await this.authService.register(
+			{
+				firstname,
+				lastname,
+				username,
+				email,
+				password,
+				birthday,
+				enable,
+				picture: this.handleUpload(upload),
+			},
+			{ ip: clientIp(request) },
+		);
 	}
 
 	/**
@@ -63,7 +70,10 @@ export class AuthController extends BaseController {
 	@Response(429, "TooManyRequests")
 	@Response(500, "InternalServerError")
 	@Middlewares([authLimiter])
-	async login(@Body() body: LoginUser | unknown): Promise<AuthenticatedUser> {
-		return await this.authService.login(body);
+	async login(
+		@Request() request: ExtendedRequest,
+		@Body() body: LoginUser,
+	): Promise<AuthenticatedUser> {
+		return await this.authService.login(body, { ip: clientIp(request) });
 	}
 }

@@ -6,18 +6,18 @@ services:
     env_file:
       - .env
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${DB_USER}
-      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
-      - MONGO_INITDB_DATABASE=${DB_NAME}
+      - MONGO_INITDB_ROOT_USERNAME=${DB_USER:?DB_USER is required}
+      - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD:?DB_PASSWORD is required}
+      - MONGO_INITDB_DATABASE=${DB_NAME:?DB_NAME is required}
     volumes:
       - ./docker/mongo-entrypoint.sh:/mongo-entrypoint.sh:ro
       - mongodb_data:/data/db
       - mongodb_config:/data/configdb
     entrypoint: [ "/mongo-entrypoint.sh" ]
     ports:
-      - "${DB_PORT}:${DB_PORT}"
+      - "${DB_PORT:?DB_PORT is required}:${DB_PORT:?DB_PORT is required}"
     healthcheck:
-      test: [ "CMD", "mongosh", "--host", "localhost", "--port", "${DB_PORT}", "-u", "${DB_USER}", "-p", "${DB_PASSWORD}", "--eval", "db.adminCommand('ping')" ]
+      test: [ "CMD", "mongosh", "--host", "localhost", "--port", "${DB_PORT:?DB_PORT is required}", "-u", "${DB_USER:?DB_USER is required}", "-p", "${DB_PASSWORD:?DB_PASSWORD is required}", "--eval", "db.adminCommand('ping')" ]
       interval: 10s
       timeout: 5s
       retries: 5

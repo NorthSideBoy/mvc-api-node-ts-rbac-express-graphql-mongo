@@ -13,49 +13,66 @@ import UserService from "../../../services/user.service";
 import { mapper } from "../../../utils/mapper.util";
 import { authGuard } from "../middlewares/auth.middleware";
 import { contextMiddleware } from "../middlewares/context.middleware";
-import ResultGQL from "../schemas/operation/output/result.schema";
+import ResultGQL from "../schemas/common/result.schema";
 // biome-ignore lint: GQL schemas should not be type
 import CreateUserGQL from "../schemas/user/input/create-user.schema";
+import QueryUsersGQL from "../schemas/user/input/query-users.schema";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserEmailGQL from "../schemas/user/input/update-user-email.schema";
 // biome-ignore lint: GQL schemas should not be type
-import UpdateUserPasswordGQL from "../schemas/user/input/update-user-passoword.schema";
+import UpdateUserPasswordGQL from "../schemas/user/input/update-user-password.schema";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserProfileGQL from "../schemas/user/input/update-user-profile.schema";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserRoleGQL from "../schemas/user/input/update-user-role.schema";
 // biome-ignore lint: GQL schemas should not be type
-import UpdateUserStatusGQL from "../schemas/user/input/update-user-status.scehma";
+import UpdateUserStatusGQL from "../schemas/user/input/update-user-status.schema";
 // biome-ignore lint: GQL schemas should not be type
 import UpdateUserUsernameGQL from "../schemas/user/input/update-user-username.schema";
+import SearchUserGQL from "../schemas/user/output/search-user.schema";
 import UserGQL from "../schemas/user/output/user.schema";
 import type { GraphQLContext } from "../types/graphql-context.type";
 import BaseResolver from "./base.resolver";
 
 @Resolver()
 export default class UserResolver extends BaseResolver {
+	private userService(ctx: GraphQLContext): UserService {
+		return new UserService(ctx.req.context);
+	}
+
 	@Query(() => UserGQL, { nullable: true })
 	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
 	async findById(
 		@Ctx() ctx: GraphQLContext,
 		@Arg("id") id: string,
 	): Promise<UserGQL | null> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.findById(id);
+		const result = await this.userService(ctx).findById(id);
 		if (!result) return null;
-		const gql = mapper.toClass(UserGQL, result);
 
-		return gql;
+		return mapper.toClass(UserGQL, result);
 	}
 
 	@Query(() => [UserGQL])
 	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
-	async getUsers(@Ctx() ctx: GraphQLContext): Promise<UserGQL[]> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.findAll();
-		const gql = result.map((item) => mapper.toClass(UserGQL, item));
+	async findAll(@Ctx() ctx: GraphQLContext): Promise<UserGQL[]> {
+		const result = await this.userService(ctx).findAll();
 
-		return gql;
+		return result.map((item) => mapper.toClass(UserGQL, item));
+	}
+
+	@Query(() => SearchUserGQL)
+	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
+	async search(
+		@Ctx() ctx: GraphQLContext,
+		@Arg("query", () => QueryUsersGQL, { nullable: true })
+		query?: QueryUsersGQL,
+	): Promise<SearchUserGQL> {
+		const result = await this.userService(ctx).query(query ?? {});
+
+		return mapper.toClass(SearchUserGQL, {
+			docs: result.docs.map((item) => mapper.toClass(UserGQL, item)),
+			pagination: result.pagination,
+		});
 	}
 
 	@Mutation(() => UserGQL)
@@ -63,28 +80,30 @@ export default class UserResolver extends BaseResolver {
 	async create(
 		@Ctx() ctx: GraphQLContext,
 		@Arg("data") data: CreateUserGQL,
-		@Arg("upload", () => GraphQLUpload) upload: Promise<FileUpload>,
+		@Arg("upload", () => GraphQLUpload, { nullable: true })
+		upload?: Promise<FileUpload>,
 	): Promise<UserGQL> {
 		const picture = await this.handleUpload(upload);
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.create(Object.assign({ picture }, data));
-		const gql = mapper.toClass(UserGQL, result);
+		const result = await this.userService(ctx).create(
+			Object.assign(
+				{ picture },
+				{ ...data, role: data.role as unknown as Role },
+			),
+		);
 
-		return gql;
+		return mapper.toClass(UserGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
 	@UseMiddleware([authGuard("Bearer", [Role.USER]), contextMiddleware()])
-	async update(
+	async updateProfile(
 		@Ctx() ctx: GraphQLContext,
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserProfileGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updateProfile(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updateProfile(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -94,11 +113,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserStatusGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updateStatus(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updateStatus(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -108,11 +125,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserRoleGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updateRole(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updateRole(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -122,11 +137,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserPasswordGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updatePassword(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updatePassword(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -136,11 +149,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserEmailGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updateEmail(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updateEmail(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -150,11 +161,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("id") id: string,
 		@Arg("data") data: UpdateUserUsernameGQL,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updateUsername(id, data);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updateUsername(id, data);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -165,11 +174,9 @@ export default class UserResolver extends BaseResolver {
 		@Arg("upload", () => GraphQLUpload) upload: Promise<FileUpload>,
 	): Promise<ResultGQL> {
 		const picture = await this.handleUpload(upload);
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.updatePicture(id, { picture });
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).updatePicture(id, { picture });
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
 	@Mutation(() => ResultGQL)
@@ -178,22 +185,19 @@ export default class UserResolver extends BaseResolver {
 		@Ctx() ctx: GraphQLContext,
 		@Arg("id") id: string,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.delete(id);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).delete(id);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 
+	@Mutation(() => ResultGQL)
 	@UseMiddleware([authGuard("Bearer", [Role.ADMIN]), contextMiddleware()])
 	async deletePicture(
 		@Ctx() ctx: GraphQLContext,
 		@Arg("id") id: string,
 	): Promise<ResultGQL> {
-		const userService = new UserService(ctx.req.context);
-		const result = await userService.deletePicture(id);
-		const gql = mapper.toClass(ResultGQL, result);
+		const result = await this.userService(ctx).deletePicture(id);
 
-		return gql;
+		return mapper.toClass(ResultGQL, result);
 	}
 }

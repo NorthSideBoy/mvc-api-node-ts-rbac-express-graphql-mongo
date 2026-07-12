@@ -13,6 +13,10 @@ export default class BaseResolver {
 		});
 	}
 
+	protected async handleUpload(upload: Promise<FileUpload>): Promise<File>;
+	protected async handleUpload(
+		upload?: Promise<FileUpload>,
+	): Promise<File | undefined>;
 	protected async handleUpload(
 		upload?: Promise<FileUpload>,
 	): Promise<File | undefined> {

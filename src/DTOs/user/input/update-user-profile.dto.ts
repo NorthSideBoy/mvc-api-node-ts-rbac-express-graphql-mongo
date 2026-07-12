@@ -1,5 +1,4 @@
-import type { CreateUser } from "./create-user.dto";
+import type { input } from "zod";
+import type { updateUserProfileCodec } from "../../../validation/codecs/user/input/update-user-profile.codec";
 
-export type UpdateUserProfile = Partial<
-	Pick<CreateUser, "firstname" | "lastname" | "birthday">
->;
+export type UpdateUserProfile = input<typeof updateUserProfileCodec>;

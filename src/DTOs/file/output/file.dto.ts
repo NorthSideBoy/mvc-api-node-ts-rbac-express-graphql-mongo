@@ -1,5 +1,4 @@
-import type { IFile } from "../../../contracts/file.contract";
+import type { output } from "zod";
+import type { fileCodec } from "../../../validation/codecs/file/output/file.codec";
 
-export interface File extends IFile {
-	url: string;
-}
+export type File = output<typeof fileCodec>;

@@ -2,6 +2,7 @@ export enum ApplicationErrorCode {
 	UserNotFound = "USER_NOT_FOUND",
 	EmailInUse = "EMAIL_IN_USE",
 	UsernameInUse = "USERNAME_IN_USE",
+	DocumentReferenced = "DOCUMENT_REFERENCED",
 	InvalidCredentials = "INVALID_CREDENTIALS",
 	PermissionDenied = "PERMISSION_DENIED",
 	UserDisabled = "USER_DISABLED",

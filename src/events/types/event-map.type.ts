@@ -1,16 +1,15 @@
-import type IUser from "../../contracts/user.contract";
-import type { AuthenticatedUser } from "../../DTOs/auth/output/authenticated-user.dto";
 import type { UpdateUserEmail } from "../../DTOs/user/input/update-user-email.dto";
-import type { UpdateUserPassword } from "../../DTOs/user/input/update-user-password.dto";
 import type { UpdateUserProfile } from "../../DTOs/user/input/update-user-profile.dto";
 import type { UpdateUserRole } from "../../DTOs/user/input/update-user-role.dto";
 import type { UpdateUserStatus } from "../../DTOs/user/input/update-user-status.dto";
 import type { UpdateUserUsername } from "../../DTOs/user/input/update-user-username.dto";
-import { EVENTS } from "../constants/events.conts";
+import type { User } from "../../DTOs/user/output/user.dto";
+import { EVENTS } from "../constants/events.constants";
+import type { EventPayload } from "./event-payload.type";
 
-type UserId = Pick<IUser, "id">;
-type AuthRef = UserId & Pick<AuthenticatedUser, "token">;
-type UserRef = UserId & Pick<IUser, "role" | "username">;
+type AuthRef = EventPayload<{ id: string; email: string; ip: string }>;
+type UserId = Pick<User, "id">;
+type UserRef = EventPayload<UserId & Pick<User, "role" | "username">>;
 
 export interface EventMap {
 	//Auth
@@ -18,15 +17,17 @@ export interface EventMap {
 	[EVENTS.AUTH.ACCOUNT_LOGGED_IN]: AuthRef;
 
 	//User
-	[EVENTS.USER.READED]: UserRef;
+	[EVENTS.USER.READ]: UserRef;
 	[EVENTS.USER.CREATED]: UserRef;
 	[EVENTS.USER.DELETED]: UserRef;
-	[EVENTS.USER.EMAIL_UPDATED]: UserId & UpdateUserEmail;
-	[EVENTS.USER.PASSWORD_UPDATED]: UserId & UpdateUserPassword;
-	[EVENTS.USER.PICTURE_DELETED]: UserRef & { pictureId: string };
-	[EVENTS.USER.PICTURE_UPDATED]: UserId & { pictureId: string };
-	[EVENTS.USER.PROFILE_UPDATED]: UserId & UpdateUserProfile;
-	[EVENTS.USER.ROLE_UPDATED]: UserId & UpdateUserRole;
-	[EVENTS.USER.STATUS_UPDATED]: UserId & UpdateUserStatus;
-	[EVENTS.USER.USERNAME_UPDATED]: UserId & UpdateUserUsername;
+	[EVENTS.USER.EMAIL_UPDATED]: EventPayload<UserId & UpdateUserEmail>;
+	[EVENTS.USER.PASSWORD_UPDATED]: EventPayload<UserId>;
+	[EVENTS.USER.PICTURE_DELETED]: EventPayload<
+		UserId & Pick<User, "role" | "username"> & { pictureId: string }
+	>;
+	[EVENTS.USER.PICTURE_UPDATED]: EventPayload<UserId & { pictureId: string }>;
+	[EVENTS.USER.PROFILE_UPDATED]: EventPayload<UserId & UpdateUserProfile>;
+	[EVENTS.USER.ROLE_UPDATED]: EventPayload<UserId & UpdateUserRole>;
+	[EVENTS.USER.STATUS_UPDATED]: EventPayload<UserId & UpdateUserStatus>;
+	[EVENTS.USER.USERNAME_UPDATED]: EventPayload<UserId & UpdateUserUsername>;
 }

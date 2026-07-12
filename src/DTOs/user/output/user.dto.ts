@@ -1,6 +1,4 @@
-import type IUser from "../../../contracts/user.contract";
-import type { File } from "../../file/output/file.dto";
+import type { output } from "zod";
+import type { userCodec } from "../../../validation/codecs/user/output/user.codec";
 
-export interface User extends Omit<IUser, "password" | "picture"> {
-	picture: File;
-}
+export type User = output<typeof userCodec>;

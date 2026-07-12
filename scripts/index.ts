@@ -4,7 +4,7 @@ import ExecutionContext from "../src/context/execution-context";
 import { isError, isZodError } from "../src/guards/error.guard";
 import { context } from "../src/utils/context.util";
 import { logger } from "../src/utils/logger.util";
-import type Script from "./base.script.ts";
+import type Script from "./base.script";
 import CreateUser from "./create-user.script";
 import Test from "./test.script";
 
@@ -31,6 +31,7 @@ function list(): void {
 
 async function main(): Promise<void> {
 	const name = process.argv[2];
+	let bootstrapped = false;
 	try {
 		if (!name || name === "-h" || name === "--help") {
 			list();
@@ -48,6 +49,7 @@ async function main(): Promise<void> {
 		}
 
 		await bootstrap();
+		bootstrapped = true;
 		logger.info(`[Script] running: ${name}`);
 
 		const ctx = ExecutionContext.system();
@@ -65,9 +67,7 @@ async function main(): Promise<void> {
 		});
 
 		logger.info(`[Script] ${name} success`);
-
-		await shutdown();
-		process.exit(0);
+		process.exitCode = 0;
 	} catch (error) {
 		if (isZodError(error)) {
 			error.message = error.issues
@@ -82,7 +82,9 @@ async function main(): Promise<void> {
 			{ error },
 			`[Script] ${name} ${isError(error) ? error.name : "UnexpectedError"}`,
 		);
-		process.exit(1);
+		process.exitCode = 1;
+	} finally {
+		if (bootstrapped) await shutdown();
 	}
 }
 

@@ -51,6 +51,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
 - **Permission scopes**: `own`, `managed`, `all` for safe “self vs managed users vs everyone” rules.
 - **JWT Bearer authentication**: `Authorization: Bearer <token>`.
 - **Dedicated auth module**: login/register now live in transport + service layers scoped to `auth`.
+- **Shared query/pagination plumbing**: Typegoose models can expose validated query filters, sorting, ranges, search, and paginated results.
 - **Auto-generated OpenAPI + routes** with tsoa (`src/api/rest/docs/swagger.json`, `src/api/rest/routes/routes.ts`).
 - **GraphQL API**: Apollo Server + type-graphql on `POST /graphql`.
 - **Typed EventBus**: services can publish domain events without coupling business logic to side-effect handlers.
@@ -119,7 +120,7 @@ This API follows an MVC-style layout (adapted for APIs), with **REST** (tsoa), *
 - **Socket.IO bridges**: outbound realtime fan-out from domain events to websocket rooms (`src/api/socket.io/bridges`).
 - **EventBus + listeners**: typed in-process domain events under `src/events` and `src/listeners`.
 - **Services**: contain business logic + authorization rules (`src/services`).
-- **Models**: encapsulate MongoDB persistence (Typegoose/Mongoose) (`src/models`).
+- **Models**: encapsulate MongoDB persistence (Typegoose/Mongoose), shared entity/person fields, DTO mapping, and reusable plugins (`src/models`, `src/plugins`).
 
 ### Request flow
 
@@ -219,17 +220,19 @@ The application validates environment variables on boot (Zod). Copy `.env.exampl
 
 | Variable | Description | Default |
 | --- | --- | --- |
-| `HOST` | HTTP bind host | `127.0.0.1` |
+| `HOST` | HTTP bind host. Defaults to `127.0.0.1` in development and `0.0.0.0` in production when omitted. | environment-based |
 | `PORT` | HTTP port | `3000` (example uses `8000`) |
 | `NODE_ENV` | `development` or `production` | `development` |
-| `LOG_LEVEL` | `debug`, `info`, `warn`, `error` | `debug` |
+| `DOMAIN` | Public domain used in production public URL (`https://<DOMAIN>`) | (required in production) |
+| `LOG_LEVEL` | `debug`, `info`, `warn`, `error`. Defaults to `debug` in development and `info` in production. | environment-based |
+| `RESPONSE_TIMEOUT` | HTTP/server response timeout in minutes | `5` |
 | `DB_HOST` | Mongo host for the app process | `127.0.0.1` |
 | `DB_PORT` | Mongo port | `27017` |
-| `DB_NAME` | Database name | (required) |
-| `DB_USER` | Mongo root username (used by Docker + app) | (required) |
-| `DB_PASSWORD` | Mongo root password (used by Docker + app) | (required) |
+| `DB_NAME` | Database name | (required when `DB_URI` is not set) |
+| `DB_USER` | Mongo root username (used by Docker + app) | (required when `DB_URI` is not set) |
+| `DB_PASSWORD` | Mongo root password (used by Docker + app) | (required when `DB_URI` is not set) |
 | `DB_AUTH_SOURCE` | Mongo authSource | `admin` |
-| `DATABASE_URL` | Mongo connection URI | (required\*) |
+| `DB_URI` | Optional full Mongo connection URI. When set, it takes precedence over the `DB_*` URI builder. | - |
 | `SOCKET_ADMIN_USERNAME` | Socket.IO admin UI Basic Auth username | (required) |
 | `SOCKET_ADMIN_PASSWORD` | Socket.IO admin UI Basic Auth password | (required) |
 | `JWT_SECRET` | JWT signing secret | (required) |
@@ -239,7 +242,7 @@ The application validates environment variables on boot (Zod). Copy `.env.exampl
 | `RATE_LIMIT_MAX` | Max requests per window | `500` |
 | `MAX_FILE_SIZE` | Max request/upload size (MB) | `5` |
 
-\* `DATABASE_URL` can be a full Mongo URI, or keep the `${...}` placeholders from `.env.example` — the app will construct the final URI from the `DB_*` variables.
+If `DB_URI` is omitted or left empty, the app constructs the final URI from `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, and `DB_AUTH_SOURCE`.
 
 `SOCKET_ADMIN_PASSWORD` is stored as plain text in `.env`, then hashed with bcrypt during environment parsing before being passed to `@socket.io/admin-ui`.
 
@@ -249,7 +252,7 @@ Main npm scripts (from `package.json`):
 
 - `npm run dev`: starts the API with Nodemon + regenerates tsoa spec/routes on changes.
 - `npm run build`: generates tsoa spec/routes then compiles TypeScript to `dist/`.
-- `npm start`: runs the compiled server (`node ./dist/server.js`).
+- `npm start`: builds first via `prestart`, then runs the compiled server (`node ./dist/server.js`).
 - `npm test`: currently a placeholder (no automated test suite configured yet).
 - `npm run script -- --help`: lists available project scripts.
 - `npm run script -- create-user`: interactive user creation script.
@@ -259,7 +262,7 @@ Main npm scripts (from `package.json`):
 - `npm run check:unsafe`: runs Biome checks (and writes fixes).
 - `npm run clean`: removes build output and generated tsoa artifacts (`dist/`, `src/api/rest/routes/routes.ts`, `src/api/rest/docs/swagger.json`).
 
-> `postinstall`, `predev`, and `prebuild` run `tsoa spec-and-routes` automatically.
+> `postinstall`, `predev`, and `prebuild` run `tsoa spec-and-routes` automatically. `prestart` runs `npm run build`.
 
 ## API documentation
 
@@ -284,8 +287,8 @@ Protected operations require the same JWT Bearer token as REST:
 Resolvers live in `src/api/graphql/resolvers` and use type-graphql schema classes from `src/api/graphql/schemas`.
 
 - Auth mutations: `register`, `login`
-- User queries: `findById`, `getUsers`
-- User mutations: `create`, `update`, `updateStatus`, `updateRole`, `updatePassword`, `updateEmail`, `updateUsername`, `updatePicture`, `delete`
+- User queries: `search`, `findById`, `findAll`
+- User mutations: `create`, `updateProfile`, `updateStatus`, `updateRole`, `updatePassword`, `updateEmail`, `updateUsername`, `updatePicture`, `deletePicture`, `delete`
 
 ### File uploads
 
@@ -295,7 +298,7 @@ This project exposes file uploads in `REST` and `GraphQL` interfaces, backed by 
 - GraphQL operations with uploads: `register`, `create`, `updatePicture`
 - In GraphQL, uploads use the `Upload` scalar (via `graphql-upload`)
 - In REST, auth register, user create, and picture updates receive the multipart field `upload`.
-- Files are stored in `storage/`. `storage/public/...` is served from `GET /public/...`, while `storage/private/...` is served from `GET /private/...` (requires AUTH).
+- Files are stored in `storage/`. `storage/public/...` is served from `GET /public/...`, while `storage/private/...` is served from `GET /private/...` (requires `ADMIN` Bearer auth).
 - API responses include file metadata with a computed `url` (e.g., `user.picture.url`).
 
 ## Real-time events
@@ -304,17 +307,24 @@ This project includes an in-process domain `EventBus` plus a `Socket.IO` transpo
 
 ### EventBus implementation
 
-- `src/services/base.service.ts` exposes `emit(eventName, payload)`, so application services can publish events without depending on transport code.
+- `src/services/base.service.ts` exposes `emit(eventName, payload)`, so application services can publish events without depending on transport code. Each payload is normalized with a generated event `id`, the actor `subject`, and typed `data`.
 - `src/events/core/event-bus.ts` wraps Node.js `EventEmitter` and keeps event publication/subscription typed through `EventMap` and `Event<K>`.
 - `bootstrap()` initializes `listeners`, and `shutdown()` unsubscribes them during graceful shutdown.
-- Default listeners are extension points: `AuthListener` subscribes to `account.logged_in`, and `UserListener` subscribes to `user.created`. In the current code they are ready for side effects but still contain placeholder logic.
+- Default listeners are extension points: `AuthListener` subscribes to `account.registered` and `account.logged_in`, and `UserListener` subscribes to `user.read`. In the current code they are ready for side effects but still contain placeholder logic.
 - In the current implementation, services actively publish these events:
+  - `AuthService.register()` -> `account.registered`
   - `AuthService.login()` -> `account.logged_in`
   - `UserService.create()` -> `user.created`
-  - `UserService.findById()` -> `user.readed`
+  - `UserService.findById()` -> `user.read`
   - `UserService.updateProfile()` -> `user.profile.updated`
-
-The typed event catalog already reserves additional user-domain names for status, role, password, email, username, picture, and delete operations, so more handlers can be added without changing the transport contracts.
+  - `UserService.updateStatus()` -> `user.status.updated`
+  - `UserService.updateRole()` -> `user.role.updated`
+  - `UserService.updatePassword()` -> `user.password.updated`
+  - `UserService.updateEmail()` -> `user.email.updated`
+  - `UserService.updateUsername()` -> `user.username.updated`
+  - `UserService.updatePicture()` -> `user.picture.updated`
+  - `UserService.deletePicture()` -> `user.picture.deleted`
+  - `UserService.delete()` -> `user.deleted`
 
 ### Socket.IO implementation
 
@@ -327,12 +337,14 @@ The typed event catalog already reserves additional user-domain names for status
 
 ### Rooms and event fan-out
 
-- On connect, `UserGateway` authenticates the socket and joins the caller to `user:self:<actorId>`.
+- On connect, `UserRoomGateway` authenticates the socket and joins the caller to `user:self:<actorId>`.
 - Clients can join or leave actor watch rooms with `user.subscribe` and `user.unsubscribe`, sending a payload shaped like `{ "id": "<USER_ID>" }`.
-- `UserBridge` subscribes to all `EVENTS.USER` values and republishes them to Socket.IO using the same domain event names.
-- Fan-out is actor-centric in the current implementation: events are emitted to `user:self:<ctx.actor.id>`, and watchable events are emitted to `user:watch:<ctx.actor.id>`.
-- Watchable user events are: `user.readed`, `user.created`, `user:deleted`, `user.picture:deleted`, `user.picture:updated`, `user.profile.updated`, `user.status.updated`, and `user.username.updated`.
+- `SocketBridge` subscribes to the configured `EVENTS.USER` values and republishes them to Socket.IO using the same domain event names.
+- Fan-out is target-centric: self deliveries use `user:self:<targetId>`, watch deliveries use `user:watch:<targetId>`, and `user.read` also notifies the actor's own self room.
+- Watch-room user events are: `user.read`, `user.created`, `user.deleted`, `user.email.updated`, `user.picture.deleted`, `user.picture.updated`, `user.profile.updated`, `user.status.updated`, and `user.username.updated`.
+- Self-room only user events are: `user.role.updated` and `user.password.updated`.
 - Auth events are currently consumed only inside the in-process `EventBus`; the websocket bridge is implemented for `EVENTS.USER` only.
+- Socket payloads preserve the domain event payload and add `room`, e.g. `{ id, subject, data, room }`.
 
 ### Client example
 
@@ -372,6 +384,7 @@ The current public API is split into **Auth** and **Users** modules (generated d
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | Register an account (multipart) | Public | - |
 | POST | `/auth/login` | Login and receive a JWT | Public (rate-limited) | - |
+| GET | `/users/search` | Search users with query filters, sorting, ranges, and pagination | Bearer JWT | `USER` |
 | GET | `/users/:id` | Get user by id | Bearer JWT | `USER` |
 | GET | `/users` | Get users | Bearer JWT | `USER` |
 | POST | `/users` | Create user (multipart) | Bearer JWT | `MANAGER` |
@@ -429,6 +442,13 @@ curl http://127.0.0.1:8000/users \
   -H "Authorization: Bearer <YOUR_JWT>"
 ```
 
+Search users:
+
+```bash
+curl "http://127.0.0.1:8000/users/search?page=1&limit=10&search=john&sort=-createdAt" \
+  -H "Authorization: Bearer <YOUR_JWT>"
+```
+
 ### Example GraphQL request
 
 Login:
@@ -445,7 +465,16 @@ Authenticated query:
 curl http://127.0.0.1:8000/graphql \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer <YOUR_JWT>" \
-  -d '{ "query": "{ getUsers { id username email role } }" }'
+  -d '{ "query": "{ findAll { id username email role } }" }'
+```
+
+Authenticated search query:
+
+```bash
+curl http://127.0.0.1:8000/graphql \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <YOUR_JWT>" \
+  -d '{ "query": "query Search($query: QueryUsers) { search(query: $query) { docs { id username email role } pagination { page limit total pages hasNext hasPrev } } }", "variables": { "query": { "page": 1, "limit": 10, "search": "john", "sort": "-createdAt" } } }'
 ```
 
 ### Example GraphQL upload request
@@ -521,7 +550,7 @@ docker/                         Docker resources for local infrastructure and en
 scripts/                        CLI scripts for manual tasks, utilities, and smoke-style project workflows.
 src/                            Main TypeScript source tree for the API, domain logic, RBAC, and validation.
 storage/                        Local filesystem storage root used by managed files.
-  private/                      Protected files served only through the private static route.
+  private/                      Protected files served only through the ADMIN-only private static route.
   public/                       Public files exposed directly by the application.
     user/                       Public user assets, including the default profile picture.
 dist/                           Compiled JavaScript output; every subfolder mirrors the purpose of its `src/` counterpart.
@@ -534,7 +563,6 @@ src/
   DTOs/                         Transfer contracts exchanged between layers and API boundaries.
     auth/                       Authentication payloads such as login, register, and authenticated-user responses.
     file/                       File creation, update, and persisted metadata contracts.
-    operation/                  Generic operation/result response contracts.
     storage/                    Low-level storage command contracts.
     user/                       User profile, search, and user-management contracts.
   api/                          Transport-layer entry points shared by REST and GraphQL.
@@ -544,13 +572,13 @@ src/
       resolvers/                GraphQL resolvers and base upload-handling logic.
       schemas/                  GraphQL schema classes exposed to clients.
         auth/                   Login/register schema types.
-        common/                 Shared schema pieces such as pagination types.
+        common/                 Shared schema pieces such as pagination, person, and result types.
         file/                   File-related schema types.
-        operation/              Generic result and operation schema types.
         user/                   User query and mutation schema types.
     socket.io/                  Realtime transport layer built on Socket.IO.
       bridges/                  EventBus-to-socket publishers for outbound realtime notifications.
       common/                   Shared room naming helpers and Socket.IO-specific constants.
+      config/                   Socket.IO gateway registration and runtime configuration helpers.
       decorators/               Metadata decorators for gateway events and middleware composition.
       gateways/                 Inbound websocket lifecycle and event handlers.
       middlewares/              Socket auth/context middleware aligned with the HTTP stack.
@@ -560,23 +588,22 @@ src/
       docs/                     Generated OpenAPI artifacts consumed by Swagger UI.
       middlewares/              REST middleware chain for auth, context, errors, and rate limiting.
       routes/                   Generated tsoa route-registration layer.
-  builders/                     Small builders for standardized return objects.
   configs/                      Environment, database, and runtime configuration loaders.
+  constants/                    Cross-cutting constants such as file defaults and Typegoose schema options.
   context/                      Request-scoped execution context and AsyncLocalStorage plumbing.
-  contracts/                    Shared interfaces describing core application shapes.
   enums/                        Cross-cutting enums for roles, mime types, visibility, error codes, etc.
   errors/                       Central error hierarchy grouped by concern.
     application/                Domain/application-level business errors for auth, files, tokens, users, etc.
     core/                       Base abstractions for application and HTTP error types.
     http/                       HTTP status-oriented errors used by the REST layer.
   events/                       Typed domain event names, payload contracts, and the in-process EventBus.
-  factories/                    Factory helpers for constructing runtime objects such as native files.
+  factories/                    Factory helpers for standardized result/search outputs.
   guards/                       Type guards used to safely classify runtime values and errors.
   helpers/                      Small helper adapters reused by higher-level flows, including shared user/auth helpers.
   listeners/                    In-process EventBus subscribers initialized during application bootstrap.
   mappers/                      Transformation helpers between representations and transport shapes.
   models/                       Mongoose/Typegoose persistence models.
-  plugins/                      Reusable model plugins such as pagination and timestamp helpers.
+  plugins/                      Reusable model plugins for query pagination, delete protection, and version updates.
   rbac/                         Role-based access-control engine and policy graph.
     constants/                  RBAC operations, permissions, and role-definition constants.
     contracts/                  RBAC-specific interfaces for roles, edges, permissions, and actors.
@@ -592,7 +619,7 @@ src/
     codecs/                     Input/output codecs grouped by bounded area.
       auth/                     Validation codecs for auth payloads.
       file/                     Validation codecs for file payloads.
-      operation/                Validation codecs for generic operation payloads.
+      common/                   Validation codecs for shared entity, pagination, query, person, and result payloads.
       storage/                  Validation codecs for storage commands.
       user/                     Validation codecs for user workflows.
     schemas/                    Reusable primitive and domain schemas shared by codecs.

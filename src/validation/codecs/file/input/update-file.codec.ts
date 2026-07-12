@@ -1,11 +1,4 @@
-import z from "zod";
-import { CreateFileCodec } from "./create-file.codec";
+import { partialUpdateCodec } from "../../common/helpers.codec";
+import { createFileCodec } from "./create-file.codec";
 
-export const UpdateFileCodec = z
-	.object(CreateFileCodec.shape)
-	.partial()
-	.strict()
-	.refine(
-		(data) => Object.values(data).some((value) => value !== undefined),
-		"At least one field must be provided",
-	);
+export const updateFileCodec = partialUpdateCodec(createFileCodec.shape);

@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import type ExecutionContext from "../context/execution-context";
 import { PermissionDeniedError } from "../errors/application/permission-denied.error";
 import { eventBus } from "../events/core/event-bus";
 import type { EventMap } from "../events/types/event-map.type";
+import type { EventInput } from "../events/types/event-payload.type";
 import type { IActor, Role } from "../rbac";
 import type { Operation } from "../rbac/types/operation.type";
 import { context } from "../utils/context.util";
@@ -30,13 +32,17 @@ export default class BaseService {
 
 	protected emit<K extends keyof EventMap>(
 		event: K,
-		payload: EventMap[K],
+		payload: EventInput<EventMap[K]>,
 	): boolean {
 		return eventBus.publish(
 			{
 				name: event,
 				source: this.constructor.name,
-				payload,
+				payload: {
+					id: randomUUID(),
+					subject: this.ctx.actor.id,
+					...payload,
+				} as EventMap[K],
 			},
 			this.ctx,
 		);

@@ -7,6 +7,7 @@ import {
 	Path,
 	Post,
 	Put,
+	Queries,
 	Response,
 	Route,
 	Security,
@@ -14,7 +15,7 @@ import {
 	Tags,
 	UploadedFile,
 } from "tsoa";
-import type Result from "../../../DTOs/operation/output/result.dto";
+import type { QueryUsers } from "../../../DTOs/user/input/query-users.dto";
 import type { UpdateUserEmail } from "../../../DTOs/user/input/update-user-email.dto";
 import type { UpdateUserPassword } from "../../../DTOs/user/input/update-user-password.dto";
 import type { UpdateUserProfile } from "../../../DTOs/user/input/update-user-profile.dto";
@@ -24,6 +25,8 @@ import type { UpdateUserUsername } from "../../../DTOs/user/input/update-user-us
 import type { User } from "../../../DTOs/user/output/user.dto";
 import { Role, type UpdateRole } from "../../../enums/role.enum";
 import UserService from "../../../services/user.service";
+import type { Result } from "../../../types/result.type";
+import type Search from "../../../types/search.type";
 import { contextMiddleware } from "../middlewares/context.middleware";
 import { BaseController } from "./base.controller";
 
@@ -31,6 +34,21 @@ import { BaseController } from "./base.controller";
 @Tags("Users")
 export class UserController extends BaseController {
 	private readonly userService = new UserService();
+
+	/**
+	 * @summary Search users
+	 */
+	@Get("/search")
+	@SuccessResponse(200)
+	@Response(401, "Unauthorized")
+	@Response(422, "UnprocessableEntity")
+	@Response(429, "TooManyRequests")
+	@Response(500, "InternalServerError")
+	@Security("Bearer", [Role.USER])
+	@Middlewares([contextMiddleware])
+	async search(@Queries() query: QueryUsers): Promise<Search<User>> {
+		return await this.userService.query(query);
+	}
 
 	/**
 	 * @summary Get user by id
@@ -91,7 +109,7 @@ export class UserController extends BaseController {
 			username,
 			email,
 			password,
-			role,
+			role: role as unknown as Role,
 			birthday,
 			enable,
 			picture: this.handleUpload(upload),
@@ -112,9 +130,9 @@ export class UserController extends BaseController {
 	@Response(500, "InternalServerError")
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
-	async update(
+	async updateProfile(
 		@Path() id: string,
-		@Body() body: UpdateUserProfile | unknown,
+		@Body() body: UpdateUserProfile,
 	): Promise<Result> {
 		return await this.userService.updateProfile(id, body);
 	}
@@ -134,7 +152,7 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updateStatus(
 		@Path() id: string,
-		@Body() body: UpdateUserStatus | unknown,
+		@Body() body: UpdateUserStatus,
 	): Promise<Result> {
 		return await this.userService.updateStatus(id, body);
 	}
@@ -154,7 +172,7 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updateRole(
 		@Path() id: string,
-		@Body() role: UpdateUserRole | unknown,
+		@Body() role: UpdateUserRole,
 	): Promise<Result> {
 		return await this.userService.updateRole(id, role);
 	}
@@ -174,7 +192,7 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updatePassword(
 		@Path() id: string,
-		@Body() body: UpdateUserPassword | unknown,
+		@Body() body: UpdateUserPassword,
 	): Promise<Result> {
 		return await this.userService.updatePassword(id, body);
 	}
@@ -195,7 +213,7 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updateEmail(
 		@Path() id: string,
-		@Body() body: UpdateUserEmail | unknown,
+		@Body() body: UpdateUserEmail,
 	): Promise<Result> {
 		return await this.userService.updateEmail(id, body);
 	}
@@ -216,7 +234,7 @@ export class UserController extends BaseController {
 	@Middlewares([contextMiddleware])
 	async updateUsername(
 		@Path() id: string,
-		@Body() body: UpdateUserUsername | unknown,
+		@Body() body: UpdateUserUsername,
 	): Promise<Result> {
 		return await this.userService.updateUsername(id, body);
 	}

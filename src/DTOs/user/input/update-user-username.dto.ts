@@ -1,3 +1,4 @@
-import type { CreateUser } from "./create-user.dto";
+import type { input } from "zod";
+import type { updateUserUsernameCodec } from "../../../validation/codecs/user/input/update-user-username.codec";
 
-export type UpdateUserUsername = Required<Pick<CreateUser, "username">>;
+export type UpdateUserUsername = input<typeof updateUserUsernameCodec>;

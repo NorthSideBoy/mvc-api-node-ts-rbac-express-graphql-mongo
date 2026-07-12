@@ -1,5 +1,4 @@
-import { ObjectId } from "mongodb";
-import type { Types } from "mongoose";
+import { Types } from "mongoose";
 import type { RegisterUser } from "../DTOs/auth/input/register-user.dto";
 import type { CreateFile } from "../DTOs/file/input/create-file.dto";
 import type { File as FileDTO } from "../DTOs/file/output/file.dto";
@@ -20,11 +19,11 @@ export default class UserHelper {
 
 	async validateUserUniqueness(
 		input: RegisterUser | CreateUser,
-		excludeId?: string,
+		id?: string,
 	): Promise<void> {
 		const [isEmailAvailable, isUsernameAvailable] = await Promise.all([
-			User.isEmailAvailable(input.email, excludeId),
-			User.isUsernameAvailable(input.username, excludeId),
+			User.isEmailAvailable(input.email, id),
+			User.isUsernameAvailable(input.username, id),
 		]);
 		if (!isEmailAvailable) throw new EmailInUseError(input.email);
 		if (!isUsernameAvailable) throw new UsernameInUseError(input.username);
@@ -51,13 +50,12 @@ export default class UserHelper {
 		});
 	}
 
-	async getDefaultPictureId(): Promise<Types.ObjectId> {
+	async getDefaultPictureId(): Promise<string> {
 		const existingPicture = await this.findDefaultPicture();
-		if (existingPicture)
-			return ObjectId.createFromHexString(existingPicture.id);
+		if (existingPicture) return existingPicture.id;
 		const defaultPicture = await this.createDefaultPicture();
 
-		return ObjectId.createFromHexString(defaultPicture.id);
+		return defaultPicture.id;
 	}
 
 	async saveUserPicture(file: File): Promise<CreateFile> {
@@ -77,12 +75,23 @@ export default class UserHelper {
 		};
 	}
 
-	async processUserPicture(file?: File): Promise<Types.ObjectId> {
+	async processUserPicture(file?: File): Promise<string> {
 		if (!file) return this.getDefaultPictureId();
 		const pictureData = await this.saveUserPicture(file);
 		const created = await this.fileService.create(pictureData);
 
-		return ObjectId.createFromHexString(created.id);
+		return created.id;
+	}
+
+	async create(input: RegisterUser | CreateUser) {
+		await this.validateUserUniqueness(input);
+		const { picture, ...data } = input;
+		const pictureId = await this.processUserPicture(picture);
+
+		return User.create({
+			...data,
+			picture: new Types.ObjectId(pictureId),
+		});
 	}
 
 	isDefaultPicture(filename: string): boolean {

@@ -1,3 +1,4 @@
-import type IUser from "../../../contracts/user.contract";
+import type { input } from "zod";
+import type { loginUserCodec } from "../../../validation/codecs/auth/input/login-user.codec";
 
-export type LoginUser = Pick<IUser, "email" | "password">;
+export type LoginUser = input<typeof loginUserCodec>;

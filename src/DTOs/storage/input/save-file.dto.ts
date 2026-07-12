@@ -1,3 +1,4 @@
-import type { OverwriteFile } from "./overwrite-file.dto";
+import type { input } from "zod";
+import type { saveFileCodec } from "../../../validation/codecs/storage/input/save-file.codec";
 
-export type SaveFile = Pick<OverwriteFile, "file" | "filepath">;
+export type SaveFile = input<typeof saveFileCodec>;

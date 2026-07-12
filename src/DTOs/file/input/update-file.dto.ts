@@ -1,3 +1,4 @@
-import type { CreateFile } from "./create-file.dto";
+import type { input } from "zod";
+import type { updateFileCodec } from "../../../validation/codecs/file/input/update-file.codec";
 
-export type UpdateFile = Partial<Omit<CreateFile, "path">>;
+export type UpdateFile = input<typeof updateFileCodec>;

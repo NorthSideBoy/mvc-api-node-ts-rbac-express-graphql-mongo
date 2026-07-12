@@ -1,9 +1,9 @@
 export enum HttpErrorCode {
-	UnprocessableEntity = "UNPROCESABLE_ENTITY",
+	UnprocessableEntity = "UNPROCESSABLE_ENTITY",
 	BadGateway = "BAD_GATEWAY",
 	BadRequest = "BAD_REQUEST",
 	Conflict = "CONFLICT",
-	Forbbidden = "FORBIDDENT",
+	Forbidden = "FORBIDDEN",
 	GatewayTimeout = "GATEWAY_TIMEOUT",
 	NotFound = "NOT_FOUND",
 	NotImplemented = "NOT_IMPLEMENTED",

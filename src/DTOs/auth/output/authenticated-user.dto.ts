@@ -1,5 +1,4 @@
-import type { User } from "../../user/output/user.dto";
+import type { output } from "zod";
+import type { authenticatedUserCodec } from "../../../validation/codecs/auth/output/authenticated-user.codec";
 
-export interface AuthenticatedUser extends User {
-	token: string;
-}
+export type AuthenticatedUser = output<typeof authenticatedUserCodec>;

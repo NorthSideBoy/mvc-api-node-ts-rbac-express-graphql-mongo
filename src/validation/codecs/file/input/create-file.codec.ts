@@ -9,7 +9,7 @@ import {
 	visibilitySchema,
 } from "../../../schemas/file.schemas";
 
-export const CreateFileCodec = z
+export const createFileCodec = z
 	.object({
 		alt: altSchema,
 		filename: filenameSchema,

@@ -66,7 +66,7 @@ export default class StorageService extends BaseService {
 	}
 
 	async read(input: ReadFile): Promise<File> {
-		const decoded = decode<ReadFile>(readFileCodec, input);
+		const decoded = decode(readFileCodec, input);
 		const fullPath = this.getFullPath(decoded.filepath, decoded.filename);
 		try {
 			return await this.readFile(fullPath);
@@ -77,9 +77,9 @@ export default class StorageService extends BaseService {
 	}
 
 	async save(input: SaveFile): Promise<File> {
-		const decoded = decode<SaveFile>(saveFileCodec, input);
+		const decoded = decode(saveFileCodec, input);
 		const extension = fileUtil.ext(decoded.file);
-		const filename = `${Date.now()}.${extension}`;
+		const filename = `${decoded.filename || Date.now()}.${extension}`;
 		const fullPath = this.getFullPath(decoded.filepath, filename);
 		await this.checkDirectory(fullPath);
 		const buffer = await fileUtil.buffer(decoded.file);
@@ -89,7 +89,7 @@ export default class StorageService extends BaseService {
 	}
 
 	async overwrite(input: OverwriteFile): Promise<File> {
-		const decoded = decode<OverwriteFile>(overwriteFileCodec, input);
+		const decoded = decode(overwriteFileCodec, input);
 		const oldFullPath = this.getFullPath(decoded.filepath, decoded.filename);
 		const exists = await this.fileExists(oldFullPath);
 		if (!exists)
@@ -98,12 +98,14 @@ export default class StorageService extends BaseService {
 			);
 		const parsedPath = path.parse(decoded.filename);
 		const newExt = fileUtil.ext(decoded.file);
-		const originalExt = parsedPath.ext;
-		const shouldRename = newExt !== originalExt;
-		const finalPath = shouldRename
-			? this.getFullPath(decoded.filepath, `${parsedPath.name}.${newExt}`)
-			: oldFullPath;
-		if (shouldRename) await fs.rename(oldFullPath, finalPath);
+		const originalExt = parsedPath.ext.replace(".", "");
+		const finalFilename = decoded.newFilename
+			? `${decoded.newFilename}.${newExt}`
+			: newExt !== originalExt
+				? `${parsedPath.name}.${newExt}`
+				: decoded.filename;
+		const finalPath = this.getFullPath(decoded.filepath, finalFilename);
+		if (finalPath !== oldFullPath) await fs.rename(oldFullPath, finalPath);
 		await fs.writeFile(finalPath, await fileUtil.buffer(decoded.file));
 
 		return await this.readFile(finalPath);

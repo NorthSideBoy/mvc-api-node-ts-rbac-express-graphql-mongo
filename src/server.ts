@@ -8,6 +8,7 @@ import { instrument } from "@socket.io/admin-ui";
 import cors from "cors";
 import express from "express";
 import graphqlUploadExpress from "graphql-upload/graphqlUploadExpress.mjs";
+import multer from "multer";
 import { pinoHttp } from "pino-http";
 import { Server } from "socket.io";
 import swaggerUi from "swagger-ui-express";
@@ -21,7 +22,7 @@ import { expressAuthentication } from "./api/rest/middlewares/auth.middleware";
 import { errorMiddleware } from "./api/rest/middlewares/error.middleware";
 import { generalLimiter } from "./api/rest/middlewares/rate-limiter.middleware";
 import { RegisterRoutes } from "./api/rest/routes/routes";
-import { bridges } from "./api/socket.io/bridges";
+import { bridges } from "./api/socket.io/bridges/socket-bridge";
 import { gateways } from "./api/socket.io/gateways";
 import { bootstrap, shutdown } from "./bootstrap";
 import { config } from "./configs/env.config";
@@ -30,6 +31,11 @@ import { logger } from "./utils/logger.util";
 
 const app = express();
 const server = createServer(app);
+const responseTimeoutMs = config.server.responseTimeout * 60 * 1000;
+
+server.setTimeout(responseTimeoutMs);
+server.requestTimeout = responseTimeoutMs;
+
 const io = new Server(server, {
 	cors: {
 		origin: config.cors.origin,
@@ -55,6 +61,10 @@ app.use(
 		: (_req, _res, next) => next(),
 );
 app.use(cors({ origin: config.cors.origin }));
+app.use((_req, res, next) => {
+	res.setTimeout(responseTimeoutMs);
+	next();
+});
 app.use(express.json({ limit: maxFileSize }));
 app.use(express.urlencoded({ extended: true, limit: maxFileSize }));
 app.use(generalLimiter);
@@ -81,7 +91,9 @@ app.get("/swagger.json", (_request, response) => {
 	response.json(swaggerDocument);
 });
 
-RegisterRoutes(app);
+RegisterRoutes(app, {
+	multer: multer({ limits: { fileSize: maxFileSize } }),
+});
 app.use(errorMiddleware);
 
 const start = async (): Promise<void> => {

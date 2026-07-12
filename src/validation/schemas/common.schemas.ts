@@ -1,8 +1,5 @@
-import { isDate } from "node:util/types";
-import moment from "moment";
 import { ObjectId } from "mongodb";
 import z from "zod";
-import { Mimetype } from "../../enums/mimetype.enum";
 
 export const idSchema = z
 	.string()
@@ -17,59 +14,70 @@ export const jwtSchema = z
 		"Invalid token (JWT)",
 	);
 
-export const querySchema = {
-	string: z.string().trim().min(1).optional(),
-	number: z.coerce.number().int().min(1),
-	boolean: z.preprocess((val) => {
-		if (typeof val !== "string") return val;
-		const normalized = val.trim().toLowerCase();
-		return normalized === "true" || normalized === "1"
-			? true
-			: normalized === "false" || normalized === "0"
-				? false
-				: val;
-	}, z.boolean()),
-};
+const dateFormatMessage =
+	"Invalid date format. Expected YYYY-MM-DD, YYYY/MM/DD, DD-MM-YYYY, DD/MM/YYYY, YYYY-MM-DDTHH:mm:ssZ, or YYYY-MM-DDTHH:mm:ss.sssZ";
+const dateTimeSchema = z.union([
+	z.iso.datetime({ precision: 0, offset: false, local: false }),
+	z.iso.datetime({ precision: 3, offset: false, local: false }),
+]);
 
-export const dateSchema = z
-	.union([
-		z.string().refine(
-			(val) => {
-				const hasValidFormat =
-					/^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z)?$/.test(val);
-				if (!hasValidFormat) return false;
-				if (/^\d{4}-\d{2}-\d{2}$/.test(val))
-					return moment(val, "YYYY-MM-DD", true).isValid();
-				return moment(val, moment.ISO_8601, true).isValid();
-			},
-			{
-				message:
-					"Invalid date format. Expected YYYY-MM-DD or YYYY-MM-DDTHH:mm:ss.sssZ",
-			},
-		),
-		z.date(),
-	])
-	.transform((val) => {
-		if (isDate(val)) {
-			if (Number.isNaN(val.getTime())) throw new Error("Invalid date value");
-			return val;
-		}
-		if (/^\d{4}-\d{2}-\d{2}$/.test(val))
-			return moment.utc(val, "YYYY-MM-DD").toDate();
-		return moment.utc(val).toDate();
-	})
-	.refine((date) => moment(date).isValid(), {
-		message: "Invalid date value",
+function dateFromParts(year: number, month: number, day: number): Date | null {
+	const date = new Date(Date.UTC(year, month - 1, day));
+	const isValid =
+		date.getUTCFullYear() === year &&
+		date.getUTCMonth() === month - 1 &&
+		date.getUTCDate() === day;
+
+	return isValid ? date : null;
+}
+
+function parseDateOnly(value: string): Date | null {
+	const yearFirst = /^(\d{4})[-/](\d{2})[-/](\d{2})$/.exec(value);
+	if (yearFirst) {
+		const [, year, month, day] = yearFirst;
+
+		return dateFromParts(Number(year), Number(month), Number(day));
+	}
+
+	const dayFirst = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(value);
+	if (dayFirst) {
+		const [, day, month, year] = dayFirst;
+
+		return dateFromParts(Number(year), Number(month), Number(day));
+	}
+
+	return null;
+}
+
+function parseDateString(value: string): Date | null {
+	const dateOnly = parseDateOnly(value);
+	if (dateOnly) return dateOnly;
+	if (!dateTimeSchema.safeParse(value).success) return null;
+
+	return new Date(value);
+}
+
+const dateStringSchema = z
+	.string()
+	.trim()
+	.refine((value) => parseDateString(value) !== null, {
+		message: dateFormatMessage,
 	});
 
-export const fileSchema = z
-	.file()
-	.min(1)
-	.max(5 * 1024 * 1024)
-	.mime(Object.values(Mimetype));
+export const dateSchema: z.ZodType<Date, string | Date> = z
+	.union([dateStringSchema, z.date()])
+	.transform((value) => {
+		if (value instanceof Date) return value;
 
-export const imageSchema = z
-	.file()
-	.min(1)
-	.max(2 * 1024 * 1024)
-	.mime([Mimetype.JPEG, Mimetype.PNG]);
+		return parseDateString(value) as Date;
+	});
+
+export const queryBooleanSchema = z.preprocess((val) => {
+	if (typeof val !== "string") return val;
+	const normalized = val.trim().toLowerCase();
+	return normalized === "true" || normalized === "1"
+		? true
+		: normalized === "false" || normalized === "0"
+			? false
+			: val;
+}, z.boolean());

@@ -1,6 +1,4 @@
-import type IUser from "../../../contracts/user.contract";
+import type { input } from "zod";
+import type { createUserCodec } from "../../../validation/codecs/user/input/create-user.codec";
 
-export type CreateUser = Omit<
-	IUser,
-	"id" | "createdAt" | "updatedAt" | "picture" | "enable"
-> & { enable?: boolean; picture?: File };
+export type CreateUser = input<typeof createUserCodec>;

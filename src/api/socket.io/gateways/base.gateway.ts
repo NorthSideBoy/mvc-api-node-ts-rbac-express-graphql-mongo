@@ -64,11 +64,10 @@ export abstract class BaseGateway {
 	): Promise<void> {
 		const ctx = this.buildContext(socket, eventName, rawArgs);
 		try {
-			await this.run(
-				ctx,
-				route.middlewares,
-				async () => await route.handler(ctx),
-			);
+			await this.run(ctx, route.middlewares, async () => {
+				this.logReceived(ctx);
+				await route.handler(ctx);
+			});
 		} catch (error) {
 			this.handleError(ctx, error);
 		}
@@ -123,5 +122,17 @@ export abstract class BaseGateway {
 		);
 		if (ctx.ack) ctx.ack({ ok: false, error: serialized });
 		if (ctx.eventName === "$connect") ctx.socket.disconnect(true);
+	}
+
+	private logReceived(ctx: SocketEventContext): void {
+		if (ctx.eventName === "$connect") return;
+		logger.info(
+			{
+				socket: { id: ctx.socket.id, event: ctx.eventName },
+				payload: ctx.payload,
+				...(ctx.context ? { actor: ctx.context.actor.audit } : {}),
+			},
+			`[Socket.IO] received event: ${ctx.eventName}`,
+		);
 	}
 }

@@ -1,43 +1,25 @@
 import path from "node:path";
 import {
 	getModelForClass,
-	modelOptions,
 	plugin,
 	prop,
 	type ReturnModelType,
 } from "@typegoose/typegoose";
-import type { Base } from "@typegoose/typegoose/lib/defaultClasses";
-import type { BeAnObject, DocumentType } from "@typegoose/typegoose/lib/types";
+import type { DocumentType } from "@typegoose/typegoose/lib/types";
 import { Expose } from "class-transformer";
-import type { Types } from "mongoose";
 import type { File as DTO } from "../DTOs/file/output/file.dto";
 import { FileVisibility } from "../enums/file-visibility.enum";
 import type { Mimetype } from "../enums/mimetype.enum";
-import { updatedAtPlugin } from "../plugins/updated-at.plugin";
+import { preventDelete } from "../plugins/prevent-delete.plugin";
 import { mapper } from "../utils/mapper.util";
 import { url } from "../utils/url.util";
-import { decode } from "../utils/validator.util";
 import { fileCodec } from "../validation/codecs/file/output/file.codec";
+import { Entity } from "./entity.model";
 
-@modelOptions({
-	schemaOptions: {
-		toJSON: {
-			virtuals: true,
-			getters: true,
-		},
-		toObject: {
-			virtuals: true,
-			getters: true,
-		},
-	},
+@plugin(preventDelete, {
+	references: [{ collection: "users", path: "picture" }],
 })
-@plugin(updatedAtPlugin)
-export class File implements Base {
-	_id!: Types.ObjectId;
-
-	@Expose()
-	id!: string;
-
+export class File extends Entity {
 	@Expose()
 	@prop({ required: true, trim: true })
 	alt: string;
@@ -51,7 +33,7 @@ export class File implements Base {
 	size: number;
 
 	@Expose()
-	@prop({ required: true, trim: true })
+	@prop({ required: true, type: String })
 	mimetype: Mimetype;
 
 	@Expose()
@@ -63,29 +45,20 @@ export class File implements Base {
 	path: string;
 
 	@Expose()
-	@prop({ required: true, default: FileVisibility.PUBLIC })
+	@prop({ required: true, default: FileVisibility.PUBLIC, type: String })
 	visibility: FileVisibility;
-
-	@Expose()
-	@prop({ default: new Date() })
-	createdAt: Date;
-
-	@Expose()
-	@prop({ default: new Date() })
-	updatedAt: Date;
 
 	@Expose()
 	public get url(): string {
 		return url.from(path.join(this.path, this.filename));
 	}
 
-	public dto(this: DocumentType<File, BeAnObject>): DTO {
-		const plain = mapper.fromDocument<File>(File, this);
-		return decode<DTO>(fileCodec, plain);
+	public dto(this: DocumentType<File>): DTO {
+		return mapper.toDto(File, this, fileCodec);
 	}
 
 	static async findByFilename(
-		this: ReturnModelType<typeof File, BeAnObject>,
+		this: ReturnModelType<typeof File>,
 		filename: string,
 	) {
 		// biome-ignore lint: Mongoose return type handled by Typegoose
@@ -97,6 +70,6 @@ export class File implements Base {
 	}
 }
 
-const FileModel = getModelForClass(File);
+const fileModel = getModelForClass(File);
 
-export default FileModel;
+export default fileModel;

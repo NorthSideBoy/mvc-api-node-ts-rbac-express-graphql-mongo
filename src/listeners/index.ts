@@ -8,26 +8,26 @@ const items: BaseListener[] = [];
 export const listeners = {
 	initialize: () => {
 		if (items.length > 0) {
-			logger.info("[EventBus] event listeners already initialized");
+			logger.info("[EventBus] listeners already initialized");
 			return items.length;
 		}
 
 		let counter = 0;
 		items.push(new AuthListener(), new UserListener());
 		for (const listener of items) counter += listener.setup();
-		logger.info(`[EventBus] event listeners: ${counter}`);
+		logger.info(`[EventBus] listeners initialized: ${counter}`);
 		return counter;
 	},
 	shutdown: () => {
 		if (items.length === 0) {
-			logger.info("[EventBus] event listeners already stopped");
+			logger.info("[EventBus] listeners already stopped");
 			return 0;
 		}
 
 		let counter = 0;
 		for (const listener of items) counter += listener.shutdown();
 		items.splice(0, items.length);
-		logger.info(`[EventBus] event listeners stopped: ${counter}`);
+		logger.info(`[EventBus] listeners stopped: ${counter}`);
 		return counter;
 	},
 };

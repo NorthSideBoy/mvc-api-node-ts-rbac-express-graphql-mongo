@@ -3,26 +3,26 @@ import type { CreateUser as DTO } from "../src/DTOs/user/input/create-user.dto";
 import { Role } from "../src/enums/role.enum";
 import UserService from "../src/services/user.service";
 import { logger } from "../src/utils/logger.util";
-import { schema } from "../src/utils/schema.util";
+import { decode, valid } from "../src/utils/validator.util";
+import { createUserCodec } from "../src/validation/codecs/user/input/create-user.codec";
 import { dateSchema } from "../src/validation/schemas/common.schemas";
 import {
-	emailSchema,
 	firstnameSchema,
 	lastnameSchema,
+} from "../src/validation/schemas/person.schemas";
+import {
+	emailSchema,
 	passwordSchema,
 	usernameSchema,
 } from "../src/validation/schemas/user.schemas";
-import BaseScript from "./base.script.ts";
+import BaseScript from "./base.script";
 
 export default class CreateUser extends BaseScript {
 	readonly name = "create-user";
 	readonly description = "Create a user";
 
-	get userService(): UserService {
-		return new UserService();
-	}
-
 	async run(): Promise<void> {
+		const userService = new UserService(this.ctx);
 		const data: Partial<DTO> = { enable: true };
 
 		const answer = await confirm({
@@ -33,22 +33,22 @@ export default class CreateUser extends BaseScript {
 
 		data.firstname = await input({
 			message: "Enter user's firstname:",
-			validate: schema.parse(firstnameSchema),
+			validate: valid(firstnameSchema),
 		});
 
 		data.lastname = await input({
 			message: "Enter user's lastname:",
-			validate: schema.parse(lastnameSchema),
+			validate: valid(lastnameSchema),
 		});
 
 		data.username = await input({
 			message: "Enter user's username:",
-			validate: schema.parse(usernameSchema),
+			validate: valid(usernameSchema),
 		});
 
 		data.email = await input({
 			message: "Enter user's email:",
-			validate: schema.parse(emailSchema),
+			validate: valid(emailSchema),
 		});
 
 		data.role = await select({
@@ -59,13 +59,13 @@ export default class CreateUser extends BaseScript {
 
 		data.birthday = (await input({
 			message: "Enter user's birthday:",
-			validate: schema.parse(dateSchema),
-		})) as unknown as Date;
+			validate: valid(dateSchema),
+		})) as DTO["birthday"];
 
 		const password1 = await password({
 			message: "Enter user's password:",
 			mask: true,
-			validate: schema.parse(passwordSchema),
+			validate: valid(passwordSchema),
 		});
 
 		await password({
@@ -79,7 +79,8 @@ export default class CreateUser extends BaseScript {
 
 		data.password = password1;
 
-		const user = await this.userService.create(data);
+		const decoded = decode(createUserCodec, data);
+		const user = await userService.create(decoded);
 		logger.info({ user });
 	}
 }

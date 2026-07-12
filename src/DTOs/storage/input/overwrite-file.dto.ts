@@ -1,5 +1,4 @@
-import type { ReadFile } from "./read-file.dto";
+import type { input } from "zod";
+import type { overwriteFileCodec } from "../../../validation/codecs/storage/input/overwrite-file.codec";
 
-export interface OverwriteFile extends ReadFile {
-	file: File;
-}
+export type OverwriteFile = input<typeof overwriteFileCodec>;

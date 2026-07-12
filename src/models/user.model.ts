@@ -1,79 +1,49 @@
 import {
 	type DocumentType,
 	getModelForClass,
-	modelOptions,
-	plugin,
 	pre,
 	prop,
-	type ReturnModelType,
 } from "@typegoose/typegoose";
-import type { Base } from "@typegoose/typegoose/lib/defaultClasses";
-import type { BeAnObject, Ref } from "@typegoose/typegoose/lib/types";
+import type { Ref } from "@typegoose/typegoose/lib/types";
 import { Expose, Type } from "class-transformer";
-import { type Filter, ObjectId } from "mongodb";
-import type { Types } from "mongoose";
-import mongooseAutoPopulate from "mongoose-autopopulate";
-import paginatePlugin from "mongoose-paginate-v2";
+import type mongoose from "mongoose";
+import { Types } from "mongoose";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import { Role } from "../enums/role.enum";
-import { updatedAtPlugin } from "../plugins/updated-at.plugin";
+import { field } from "../plugins/paginate-query.plugin";
 import type { Token } from "../types/token.type";
 import { hasher } from "../utils/hasher.util";
 import { mapper } from "../utils/mapper.util";
-import { decode } from "../utils/validator.util";
 import { userCodec } from "../validation/codecs/user/output/user.codec";
+import type { EntityModelType } from "./entity.model";
 import { File } from "./file.model";
+import { Person } from "./person.model";
 
-type UserModelType = ReturnModelType<typeof User, BeAnObject>;
+type UserModelType = EntityModelType<typeof User>;
 
-@modelOptions({
-	schemaOptions: {
-		toJSON: {
-			virtuals: true,
-			getters: true,
-		},
-		toObject: {
-			virtuals: true,
-			getters: true,
-		},
-	},
-})
 @pre<User>("save", async function () {
 	const isHash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
 	if (!isHash.test(this.password))
 		this.password = await hasher.encrypt(this.password);
 })
-@plugin(paginatePlugin)
-@plugin(updatedAtPlugin)
-@plugin(mongooseAutoPopulate)
-export class User implements Base {
-	_id!: Types.ObjectId;
-
+export class User extends Person {
 	@Expose()
-	id!: string;
-
-	@Expose()
-	@prop({ required: true, trim: true })
-	firstname: string;
-
-	@Expose()
-	@prop({ required: true, trim: true })
-	lastname: string;
-
-	@Expose()
+	@field()
 	@prop({ required: true, trim: true, unique: true })
 	username: string;
 
 	@Expose()
+	@field()
 	@prop({ required: true, trim: true, unique: true })
 	email: string;
 
 	@Expose()
-	@prop({ default: Role.USER })
+	@field()
+	@prop({ default: Role.USER, type: String })
 	role: Role;
 
-	@Expose()
 	@Type(() => File)
+	@Expose()
 	@prop({ ref: () => File, required: true, autopopulate: true })
 	picture: Ref<File>;
 
@@ -81,24 +51,17 @@ export class User implements Base {
 	password: string;
 
 	@Expose()
+	@field({ filterable: false })
 	@prop({ required: true })
 	birthday: Date;
 
 	@Expose()
+	@field()
 	@prop({ default: false })
 	enable: boolean;
 
-	@Expose()
-	@prop({ default: new Date() })
-	createdAt: Date;
-
-	@Expose()
-	@prop({ default: new Date() })
-	updatedAt: Date;
-
-	public dto(this: DocumentType<User, BeAnObject>): DTO {
-		const plain = mapper.fromDocument<User>(User, this);
-		return decode<DTO>(userCodec, plain);
+	public dto(this: DocumentType<User>): DTO {
+		return mapper.toDto(User, this, userCodec);
 	}
 
 	public get sign(): Token.Sign {
@@ -111,7 +74,7 @@ export class User implements Base {
 	}
 
 	public async comparePassword(
-		this: DocumentType<User, BeAnObject>,
+		this: DocumentType<User>,
 		plain: string,
 	): Promise<boolean> {
 		return await hasher.compare(plain, this.password);
@@ -148,8 +111,8 @@ export class User implements Base {
 		username: string,
 		id?: string,
 	): Promise<boolean> {
-		const query: Filter<User> = { username };
-		if (id) query._id = { $ne: ObjectId.createFromHexString(id) };
+		const query: mongoose.QueryFilter<User> = { username };
+		if (id) query._id = { $ne: new Types.ObjectId(id) };
 
 		// biome-ignore lint: Mongoose return type handled by Typegoose
 		const exists = await this.exists(query);
@@ -161,8 +124,8 @@ export class User implements Base {
 		email: string,
 		id?: string,
 	): Promise<boolean> {
-		const query: Filter<User> = { email };
-		if (id) query._id = { $ne: ObjectId.createFromHexString(id) };
+		const query: mongoose.QueryFilter<User> = { email };
+		if (id) query._id = { $ne: new Types.ObjectId(id) };
 
 		// biome-ignore lint: Mongoose return type handled by Typegoose
 		const exists = await this.exists(query);
@@ -170,6 +133,6 @@ export class User implements Base {
 	}
 }
 
-const UserModel = getModelForClass(User) as unknown as UserModelType;
+const userModel = getModelForClass(User) as UserModelType;
 
-export default UserModel;
+export default userModel;

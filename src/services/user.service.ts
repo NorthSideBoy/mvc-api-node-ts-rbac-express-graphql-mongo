@@ -1,6 +1,7 @@
-import { result } from "../builders/result.builder";
-import type Result from "../DTOs/operation/output/result.dto";
+import type { DocumentType } from "@typegoose/typegoose";
+import { Types } from "mongoose";
 import type { CreateUser } from "../DTOs/user/input/create-user.dto";
+import type { QueryUsers } from "../DTOs/user/input/query-users.dto";
 import type { UpdateUserEmail } from "../DTOs/user/input/update-user-email.dto";
 import type { UpdateUserPassword } from "../DTOs/user/input/update-user-password.dto";
 import type { UpdateUserPicture } from "../DTOs/user/input/update-user-picture.dto";
@@ -13,16 +14,21 @@ import { DuplicatePasswordError } from "../errors/application/duplicate-password
 import { EmailInUseError } from "../errors/application/email-in-use.error";
 import { UserNotFoundError } from "../errors/application/user-not-found.error";
 import { UsernameInUseError } from "../errors/application/username-in-use.error";
-import { EVENTS } from "../events/constants/events.conts";
+import { EVENTS } from "../events/constants/events.constants";
+import { result } from "../factories/result.factory";
+import { search } from "../factories/search.factory";
 import UserHelper from "../helpers/user.helper";
 import { extToMimetype } from "../mappers/mimetype.mapper";
 import { roleToRBACRole, updateRoleToRole } from "../mappers/role.mapper";
-import User from "../models/user.model";
+import User, { type User as UserEntity } from "../models/user.model";
 import { OPERATIONS } from "../rbac/constants/operations.constant";
 import Actor from "../rbac/models/actor.model";
+import type { Result } from "../types/result.type";
+import type Search from "../types/search.type";
 import { file as fileUtil } from "../utils/file.util";
 import { decode } from "../utils/validator.util";
 import { createUserCodec } from "../validation/codecs/user/input/create-user.codec";
+import { queryUsersCodec } from "../validation/codecs/user/input/query-users.codec";
 import { updateUserEmailCodec } from "../validation/codecs/user/input/update-user-email.codec";
 import { updateUserPasswordCodec } from "../validation/codecs/user/input/update-user-password.codec";
 import { updateUserPictureCodec } from "../validation/codecs/user/input/update-user-picture.codec";
@@ -30,33 +36,38 @@ import { updateUserProfileCodec } from "../validation/codecs/user/input/update-u
 import { updateUserRoleCodec } from "../validation/codecs/user/input/update-user-role.codec";
 import { updateUserStatusCodec } from "../validation/codecs/user/input/update-user-status.codec";
 import { updateUserUsernameCodec } from "../validation/codecs/user/input/update-user-username.codec";
+import { idSchema } from "../validation/schemas/common.schemas";
 import BaseService from "./base.service";
 import FileService from "./file.service";
 import StorageService from "./storage.service";
+
+type UserDocument = DocumentType<UserEntity>;
 
 export default class UserService extends BaseService {
 	private readonly storage = new StorageService();
 	private readonly fileService = new FileService();
 	private readonly userHelper = new UserHelper();
 
-	private async getUserByIdOrThrow(id: string) {
-		const user = await User.findById(id);
+	private async getUserByIdOrThrow(id: string): Promise<UserDocument> {
+		const userId = decode(idSchema, id);
+		const user = await User.findById(userId);
 		if (!user) throw new UserNotFoundError();
 
 		return user;
 	}
 
-	async create(input: CreateUser | unknown): Promise<DTO> {
-		const decoded = decode<CreateUser>(createUserCodec, input);
-		this.canManage(OPERATIONS.USER_CREATE, Actor.dummy(decoded.role));
-		this.canAssign(decoded.role);
-		await this.userHelper.validateUserUniqueness(decoded);
-		const pictureId = await this.userHelper.processUserPicture(decoded.picture);
-		const user = await User.create({ ...decoded, picture: pictureId });
+	async create(input: CreateUser): Promise<DTO> {
+		const decoded = decode(createUserCodec, input);
+		const rbacRole = roleToRBACRole(decoded.role);
+		this.canManage(OPERATIONS.USER_CREATE, Actor.dummy(rbacRole));
+		this.canAssign(rbacRole);
+		const user = await this.userHelper.create(decoded);
 		this.emit(EVENTS.USER.CREATED, {
-			id: user.id,
-			username: user.username,
-			role: user.role,
+			data: {
+				id: user.id,
+				username: user.username,
+				role: user.role,
+			},
 		});
 
 		return user.dto();
@@ -64,16 +75,26 @@ export default class UserService extends BaseService {
 
 	async findById(id: string): Promise<DTO | null> {
 		this.can(OPERATIONS.USER_READ);
-		const user = await User.findById(id);
+		const userId = decode(idSchema, id);
+		const user = await User.findById(userId);
 		if (!user) return null;
 
-		this.emit(EVENTS.USER.READED, {
-			id: user.id,
-			username: user.username,
-			role: user.role,
+		this.emit(EVENTS.USER.READ, {
+			data: {
+				id: user.id,
+				username: user.username,
+				role: user.role,
+			},
 		});
 
 		return user.dto();
+	}
+
+	async exists(id: string): Promise<boolean> {
+		const userId = decode(idSchema, id);
+		const exists = await User.exists({ _id: userId });
+
+		return exists !== null;
 	}
 
 	async findAll(): Promise<DTO[]> {
@@ -83,85 +104,73 @@ export default class UserService extends BaseService {
 		return users.map((user) => user.dto());
 	}
 
-	async updateProfile(
-		id: string,
-		input: UpdateUserProfile | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserProfile>(updateUserProfileCodec, input);
+	async query(input: QueryUsers): Promise<Search<DTO>> {
+		this.can(OPERATIONS.USER_READ);
+		const decoded = decode(queryUsersCodec, input);
+		const result = await User.query(decoded);
+
+		return search(result, (user) => user.dto());
+	}
+
+	async updateProfile(id: string, input: UpdateUserProfile): Promise<Result> {
+		const decoded = decode(updateUserProfileCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_PROFILE, user);
 		const operation = await User.updateOne({ _id: id }, decoded);
-
-		this.emit(EVENTS.USER.PROFILE_UPDATED, {
-			id,
-			firstname: decoded.firstname,
-			lastname: decoded.lastname,
-			birthday: decoded.birthday,
-		});
+		this.emit(EVENTS.USER.PROFILE_UPDATED, { data: { id, ...decoded } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updateStatus(
-		id: string,
-		input: UpdateUserStatus | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserStatus>(updateUserStatusCodec, input);
+	async updateStatus(id: string, input: UpdateUserStatus): Promise<Result> {
+		const decoded = decode(updateUserStatusCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_STATUS, user);
 		const operation = await User.updateOne({ _id: id }, decoded);
+		this.emit(EVENTS.USER.STATUS_UPDATED, { data: { id, ...decoded } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updateRole(
-		id: string,
-		input: UpdateUserRole | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserRole>(updateUserRoleCodec, input);
+	async updateRole(id: string, input: UpdateUserRole): Promise<Result> {
+		const decoded = decode(updateUserRoleCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_ROLE, user);
 		const role = updateRoleToRole(decoded.role);
 		const rbacRole = roleToRBACRole(role);
 		this.canAssign(rbacRole);
 		const operation = await User.updateOne({ _id: id }, decoded);
+		this.emit(EVENTS.USER.ROLE_UPDATED, { data: { id, ...decoded } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updatePassword(
-		id: string,
-		input: UpdateUserPassword | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserPassword>(updateUserPasswordCodec, input);
+	async updatePassword(id: string, input: UpdateUserPassword): Promise<Result> {
+		const decoded = decode(updateUserPasswordCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_PASSWORD, user);
 		const isSamePassword = await user.comparePassword(decoded.password);
 		if (isSamePassword) throw new DuplicatePasswordError();
 		const operation = await User.updatePassword(id, decoded.password);
+		this.emit(EVENTS.USER.PASSWORD_UPDATED, { data: { id } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updateEmail(
-		id: string,
-		input: UpdateUserEmail | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserEmail>(updateUserEmailCodec, input);
+	async updateEmail(id: string, input: UpdateUserEmail): Promise<Result> {
+		const decoded = decode(updateUserEmailCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_EMAIL, user);
 		const isEmailAvailable = await User.isEmailAvailable(decoded.email, id);
 		if (!isEmailAvailable) throw new EmailInUseError(decoded.email);
 		const operation = await User.updateOne({ _id: id }, decoded);
+		this.emit(EVENTS.USER.EMAIL_UPDATED, { data: { id, ...decoded } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updateUsername(
-		id: string,
-		input: UpdateUserUsername | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserUsername>(updateUserUsernameCodec, input);
+	async updateUsername(id: string, input: UpdateUserUsername): Promise<Result> {
+		const decoded = decode(updateUserUsernameCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_USERNAME, user);
 		const isUsernameAvailable = await User.isUsernameAvailable(
@@ -170,15 +179,13 @@ export default class UserService extends BaseService {
 		);
 		if (!isUsernameAvailable) throw new UsernameInUseError(decoded.username);
 		const operation = await User.updateOne({ _id: id }, decoded);
+		this.emit(EVENTS.USER.USERNAME_UPDATED, { data: { id, ...decoded } });
 
 		return result(operation.modifiedCount);
 	}
 
-	async updatePicture(
-		id: string,
-		input: UpdateUserPicture | unknown,
-	): Promise<Result> {
-		const decoded = decode<UpdateUserPicture>(updateUserPictureCodec, input);
+	async updatePicture(id: string, input: UpdateUserPicture): Promise<Result> {
+		const decoded = decode(updateUserPictureCodec, input);
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_UPDATE_PICTURE, user);
 		const picture = user.dto().picture;
@@ -188,8 +195,12 @@ export default class UserService extends BaseService {
 			);
 			const operation = await User.updateOne(
 				{ _id: id },
-				{ picture: newPictureId },
+				{ picture: new Types.ObjectId(newPictureId) },
 			);
+			this.emit(EVENTS.USER.PICTURE_UPDATED, {
+				data: { id, pictureId: newPictureId },
+			});
+
 			return result(operation.modifiedCount);
 		}
 		const overwritten = await this.storage.overwrite({
@@ -207,6 +218,9 @@ export default class UserService extends BaseService {
 			size,
 			mimetype,
 		});
+		this.emit(EVENTS.USER.PICTURE_UPDATED, {
+			data: { id, pictureId: picture.id },
+		});
 
 		return operation;
 	}
@@ -215,12 +229,18 @@ export default class UserService extends BaseService {
 		const user = await this.getUserByIdOrThrow(id);
 		this.canManage(OPERATIONS.USER_DELETE, user);
 		const picture = user.dto().picture;
-		if (!this.userHelper.isDefaultPicture(picture.filename))
-			await Promise.all([
-				this.fileService.delete(picture.id),
-				this.storage.delete(picture.path, picture.filename),
-			]);
 		const operation = await User.deleteOne({ _id: id });
+		this.emit(EVENTS.USER.DELETED, {
+			data: {
+				id,
+				username: user.username,
+				role: user.role,
+			},
+		});
+		if (!this.userHelper.isDefaultPicture(picture.filename)) {
+			await this.fileService.delete(picture.id);
+			await this.storage.delete(picture.path, picture.filename);
+		}
 
 		return result(operation.deletedCount);
 	}
@@ -230,15 +250,21 @@ export default class UserService extends BaseService {
 		this.canManage(OPERATIONS.USER_DELETE_PICTURE, user);
 		const picture = user.dto().picture;
 		if (this.userHelper.isDefaultPicture(picture.filename)) return result(0);
-		await Promise.all([
-			this.fileService.delete(picture.id),
-			this.storage.delete(picture.path, picture.filename),
-		]);
 		const defaultPictureId = await this.userHelper.getDefaultPictureId();
 		const operation = await User.updateOne(
 			{ _id: id },
-			{ picture: defaultPictureId },
+			{ picture: new Types.ObjectId(defaultPictureId) },
 		);
+		await this.fileService.delete(picture.id);
+		await this.storage.delete(picture.path, picture.filename);
+		this.emit(EVENTS.USER.PICTURE_DELETED, {
+			data: {
+				id,
+				username: user.username,
+				role: user.role,
+				pictureId: picture.id,
+			},
+		});
 
 		return result(operation.modifiedCount);
 	}

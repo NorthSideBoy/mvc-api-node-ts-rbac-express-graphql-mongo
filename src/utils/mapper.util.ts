@@ -5,6 +5,8 @@ import {
 	instanceToPlain,
 	plainToInstance,
 } from "class-transformer";
+import type { output as Output, ZodType } from "zod";
+import { decode } from "./validator.util";
 
 type TypegooseDocument<T> = DocumentType<T, BeAnObject>;
 
@@ -35,5 +37,15 @@ export const mapper = {
 		});
 
 		return plain;
+	},
+
+	toDto: <TEntity, TCodec extends ZodType>(
+		entity: ClassConstructor<TEntity>,
+		document: TypegooseDocument<TEntity>,
+		codec: TCodec,
+	): Output<TCodec> => {
+		const plain = mapper.fromDocument(entity, document);
+
+		return decode(codec, plain);
 	},
 };
