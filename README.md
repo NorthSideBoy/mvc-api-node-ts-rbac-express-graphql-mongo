@@ -5,14 +5,14 @@
 RESTful API boilerplate implementing **MVC** + **RBAC (Role-Based Access Control)** with **JWT** authentication, **REST + GraphQL** transports, an in-process **EventBus**, **Socket.IO** realtime delivery, **OpenAPI/Swagger** documentation (via **tsoa**), and a ready-to-use **MongoDB Docker Compose** setup.
 
 [![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
-[![Repository](https://img.shields.io/badge/repository-GitHub-181717?logo=github&logoColor=white)](https://github.com/NorthSideBoy/mvc-rbac-api-node-express-ts-mongo)
+[![Repository](https://img.shields.io/badge/repository-GitHub-181717?logo=github&logoColor=white)](https://github.com/NorthSideBoy/mvc-api-node-ts-rbac-express-graphql-mongo)
 [![Node.js](https://img.shields.io/badge/node.js-LTS-339933?logo=nodedotjs&logoColor=white)](#tech-stack)
-[![Express](https://img.shields.io/badge/express-4.x-82cc2d?logo=express&logoColor=white)](#tech-stack)
+[![Express](https://img.shields.io/badge/express-5.x-82cc2d?logo=express&logoColor=white)](#tech-stack)
 [![TypeScript](https://img.shields.io/badge/typescript-5.x-3178C6?logo=typescript&logoColor=white)](#tech-stack)
 [![GraphQL](https://img.shields.io/badge/graphql-16.x-E10098?logo=graphql&logoColor=white)](#tech-stack)
 [![Socket.io](https://img.shields.io/badge/socket.io-4.x-010101?logo=socket.io&logoColor=white)](#tech-stack)
 [![MongoDB](https://img.shields.io/badge/mongodb-8.x-47A248?logo=mongodb&logoColor=white)](#tech-stack)
-[![Docker](https://img.shields.io/badge/docker-24.x-2496ED?logo=docker&logoColor=white)](#tech-stack)
+[![Docker](https://img.shields.io/badge/docker-required-2496ED?logo=docker&logoColor=white)](#tech-stack)
 [![Swagger](https://img.shields.io/badge/openapi-swagger-85EA2D?logo=swagger&logoColor=black)](#api-documentation)
 [![JWT](https://img.shields.io/badge/jwt-auth-000000?logo=jsonwebtokens&logoColor=white)](#authentication)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/NorthSideBoy/mvc-api-node-ts-rbac-express-graphql-mongo)
@@ -59,7 +59,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
 - **File uploads + storage**: multi-purpose upload/storage layer (currently used for user profile pictures) via REST multipart + GraphQL `Upload`, with public/private static serving.
 - **MongoDB via Docker Compose** (replica set initialized automatically).
 - **Request validation** with Zod (422 responses include validation details).
-- **Rate limiting** Express + GraphQL (global + stricter limiter for 'auth').
+- **Rate limiting** for Express + GraphQL (global + stricter login limiter).
 - **Structured logging** with Pino.
 - **Lint/format** with Biome.
 
@@ -158,7 +158,7 @@ RBAC implementation lives in:
 - `src/rbac/policy.ts` (permissions, subjects, scopes, and subject resource helpers)
 - `src/rbac/types.ts` (RBAC type contract derived from the runtime policy)
 - `src/rbac/role-definitions.ts` (declarative role rules plus anonymous/system rules)
-- `src/rbac/role-hierarchy.ts` (role inheritance and minimum-role helpers)
+- `src/rbac/role-hierarchy.ts` (role inheritance and policy validation helpers)
 - `src/rbac/ability.ts` (CASL ability builder and scope-to-condition mapping)
 - `src/rbac/authorizer.ts` (service-facing authorization wrapper)
 - `src/security/actor.ts` (request actor with cached CASL ability)
@@ -168,32 +168,30 @@ RBAC implementation lives in:
 ### Prerequisites
 
 - Docker + Docker Compose
-- Node.js (LTS recommended)
+- Node.js 20.19 or newer (LTS recommended)
 - npm
 
 ### Installation
 
-1) Start MongoDB (and initialize the replica set) in detached mode:
-
-```bash
-docker compose up -d
-```
-
-> Note: Docker Compose reads `.env`. If you create/update `.env` after starting the containers, re-run `docker compose up -d` to apply the changes.
-
-2) Install dependencies (this also generates OpenAPI + routes via `postinstall`):
+1) Install dependencies (this also generates OpenAPI + routes via `postinstall`):
 
 ```bash
 npm install
 ```
 
-3) Configure environment variables:
+2) Configure environment variables:
 
 ```bash
 cp .env.example .env
 ```
 
 Then edit `.env` with your values (see [Environment variables](#environment-variables)).
+
+3) Start MongoDB (and initialize the replica set) in detached mode:
+
+```bash
+docker compose up -d
+```
 
 4) Database migrations / seeders
 
@@ -261,8 +259,9 @@ Main npm scripts (from `package.json`):
 - `npm run script -- create-user`: interactive user creation script.
 - `npm run format`: formats code with Biome.
 - `npm run lint`: lints (and writes fixes) with Biome.
-- `npm run check`: runs Biome checks.
-- `npm run check:unsafe`: runs Biome checks (and writes fixes).
+- `npm run check`: runs Biome checks and writes fixes.
+- `npm run check:unsafe`: runs Biome checks, including unsafe fixes, and writes them.
+- `npm run script -- test`: runs the bundled hello-world script.
 - `npm run clean`: removes build output and generated tsoa artifacts (`dist/`, `src/api/rest/routes/routes.ts`, `src/api/rest/docs/swagger.json`).
 
 > `postinstall`, `predev`, and `prebuild` run `tsoa spec-and-routes` automatically. `prestart` runs `npm run build`.
@@ -272,6 +271,7 @@ Main npm scripts (from `package.json`):
 This project ships Swagger UI using `swagger-ui-express`.
 
 - Swagger UI: `GET /docs`
+- OpenAPI document: `GET /swagger.json`
 
 ## GraphQL API
 
@@ -487,6 +487,7 @@ Update picture:
 ```bash
 curl http://127.0.0.1:8000/graphql \
   -H "Authorization: Bearer <YOUR_JWT>" \
+  -H "Apollo-Require-Preflight: true" \
   -F 'operations={"query":"mutation($id: String!, $upload: Upload!) { updatePicture(id: $id, upload: $upload) { success affected } }","variables":{"id":"<USER_ID>","upload":null}}' \
   -F 'map={"0":["variables.upload"]}' \
   -F 0=@./avatar.jpeg
@@ -602,7 +603,6 @@ src/
     socket.io/                  Realtime transport layer built on Socket.IO.
       bridges/                  EventBus-to-socket publishers for outbound realtime notifications.
       common/                   Shared room naming helpers and Socket.IO-specific constants.
-      config/                   Socket.IO gateway registration and runtime configuration helpers.
       decorators/               Metadata decorators for gateway events and middleware composition.
       gateways/                 Inbound websocket lifecycle and event handlers.
       middlewares/              Socket auth/context middleware aligned with the HTTP stack.
