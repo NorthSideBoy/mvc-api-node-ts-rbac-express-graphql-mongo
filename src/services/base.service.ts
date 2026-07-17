@@ -1,50 +1,48 @@
 import { randomUUID } from "node:crypto";
 import type ExecutionContext from "../context/execution-context";
-import { PermissionDeniedError } from "../errors/application/permission-denied.error";
 import { eventBus } from "../events/core/event-bus";
 import type { EventMap } from "../events/types/event-map.type";
-import type { EventInput } from "../events/types/event-payload.type";
-import type { IActor, Role } from "../rbac";
-import type { Operation } from "../rbac/types/operation.type";
+import {
+	type AppPermission,
+	Authorizer,
+	subjectForPermission,
+	type UserAuthorizationTarget,
+} from "../rbac";
 import { context } from "../utils/context.util";
 
 export default class BaseService {
 	protected readonly ctx: ExecutionContext;
+	protected readonly authorizer: Authorizer;
 
 	constructor(ctx?: ExecutionContext) {
 		this.ctx = ctx || context.get();
+		this.authorizer = new Authorizer(this.ctx.actor);
 	}
 
-	protected can(operation: Operation, message?: string) {
-		if (!this.ctx.actor.can(operation))
-			throw new PermissionDeniedError(message);
-	}
-
-	protected canManage(operation: Operation, target: IActor, message?: string) {
-		if (!this.ctx.actor.canManage(operation, target))
-			throw new PermissionDeniedError(message);
-	}
-
-	protected canAssign(role: Role, message?: string) {
-		if (!this.ctx.actor.canAssign(role))
-			throw new PermissionDeniedError(message);
+	protected authorize(
+		permission: AppPermission,
+		target?: UserAuthorizationTarget,
+		message?: string,
+	) {
+		this.authorizer.authorize(
+			permission.action,
+			subjectForPermission(permission, target),
+			message,
+		);
 	}
 
 	protected emit<K extends keyof EventMap>(
 		event: K,
-		payload: EventInput<EventMap[K]>,
+		data: EventMap[K]["data"],
 	): boolean {
-		return eventBus.publish(
-			{
-				name: event,
-				source: this.constructor.name,
-				payload: {
-					id: randomUUID(),
-					subject: this.ctx.actor.id,
-					...payload,
-				} as EventMap[K],
-			},
-			this.ctx,
-		);
+		return eventBus.publish({
+			name: event,
+			source: this.constructor.name,
+			payload: {
+				id: randomUUID(),
+				subject: this.ctx.actor.id,
+				data,
+			} as EventMap[K],
+		});
 	}
 }

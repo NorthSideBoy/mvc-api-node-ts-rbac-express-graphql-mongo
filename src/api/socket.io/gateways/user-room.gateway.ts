@@ -92,7 +92,7 @@ export default class UserRoomGateway extends BaseGateway {
 			return;
 		}
 
-		const targetExists = await new UserService(ctx.context).exists(targetId);
+		const targetExists = await new UserService().exists(targetId);
 		if (!targetExists) {
 			this.deny(ctx, "USER_NOT_FOUND", "Target user does not exist", action);
 			return;

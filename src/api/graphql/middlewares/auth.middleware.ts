@@ -5,14 +5,14 @@ import type { GraphQLContext } from "../types/graphql-context.type";
 
 export function authGuard(
 	securityName: string,
-	allowed: Role[],
+	allowedRoles: Role[],
 ): MiddlewareFn<GraphQLContext> {
 	return async ({ context }, next) => {
 		const { req } = context;
 		req.access = await authorize(
 			req.headers.authorization,
 			securityName,
-			allowed,
+			allowedRoles,
 		);
 		return await next();
 	};

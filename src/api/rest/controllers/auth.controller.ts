@@ -21,7 +21,10 @@ import { BaseController } from "./base.controller";
 @Route("auth")
 @Tags("Auth")
 export class AuthController extends BaseController {
-	private readonly authService = new AuthService();
+	private authService(): AuthService {
+		return new AuthService();
+	}
+
 	/**
 	 * @summary Register account
 	 */
@@ -43,7 +46,7 @@ export class AuthController extends BaseController {
 		@FormField() enable?: boolean,
 		@UploadedFile() upload?: Express.Multer.File,
 	): Promise<AuthenticatedUser> {
-		return await this.authService.register(
+		return await this.authService().register(
 			{
 				firstname,
 				lastname,
@@ -74,6 +77,6 @@ export class AuthController extends BaseController {
 		@Request() request: ExtendedRequest,
 		@Body() body: LoginUser,
 	): Promise<AuthenticatedUser> {
-		return await this.authService.login(body, { ip: clientIp(request) });
+		return await this.authService().login(body, { ip: clientIp(request) });
 	}
 }

@@ -42,13 +42,13 @@ RESTful API boilerplate implementing **MVC** + **RBAC (Role-Based Access Control
 Building APIs is easy; building **secure** APIs that scale in complexity is harder. This repository provides a clean starting point for a Node.js + Express + MongoDB REST API with:
 
 - **Role-based route protection** (minimum required role per endpoint).
-- **Fine-grained authorization** inside the service layer (permissions + scopes like *own*, *managed*, *all*).
+- **Fine-grained authorization** inside the service layer with CASL abilities and subject conditions.
 - **A consistent architecture** (MVC-style layering) to keep code maintainable as features grow.
 
 ## Key features
 
 - **RBAC with role hierarchy**: e.g. `ADMIN` includes `MANAGER` includes `USER` (higher roles inherit access).
-- **Permission scopes**: `own`, `managed`, `all` for safe “self vs managed users vs everyone” rules.
+- **CASL abilities**: subject-based rules for safe “self vs managed users vs included roles” authorization.
 - **JWT Bearer authentication**: `Authorization: Bearer <token>`.
 - **Dedicated auth module**: login/register now live in transport + service layers scoped to `auth`.
 - **Shared query/pagination plumbing**: Typegoose models can expose validated query filters, sorting, ranges, search, and paginated results.
@@ -106,7 +106,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
   </tr>
 </table>
 
-Also used: **tsoa**, **Mongoose/Typegoose**, **Zod**, **Pino**, **express-rate-limit**, **Biome**.
+Also used: **CASL**, **tsoa**, **Mongoose/Typegoose**, **Zod**, **Pino**, **express-rate-limit**, **Biome**.
 GraphQL stack: **Apollo Server**, **type-graphql**
 
 ## Architecture
@@ -137,7 +137,7 @@ REST Routes (/...)        GraphQL Endpoint (/graphql)        Socket.IO Gateway (
 Controllers / Resolvers / Gateways
   |
   v
-Services (RBAC permission checks)
+Services (CASL authorization checks)
   |
   +--> Models (Typegoose/Mongoose) -------------------------> MongoDB
   |
@@ -148,16 +148,20 @@ Services (RBAC permission checks)
 
 ### Where RBAC fits
 
-RBAC is enforced in two complementary layers:
+RBAC is enforced after authentication:
 
-1. **Route-level (minimum role)**: endpoints declare the minimum required role using tsoa `@Security("Bearer", [Role.X])`. Higher roles inherit access via the role graph.
-2. **Service-level (permissions + scopes)**: services validate *what* an actor can do and *to whom* (e.g., update your own profile vs manage lower roles).
+1. **Transport-level authentication**: REST, GraphQL, and Socket.IO validate bearer credentials and create an execution context.
+2. **Service-level authorization (CASL abilities)**: services validate *what* an actor can do and *to whom* through CASL subjects and conditions.
 
 RBAC implementation lives in:
 
-- `src/rbac/constants/role-definitions.constant.ts` (role graph + included roles)
-- `src/rbac/constants/permissions.constant.ts` (permission list)
-- `src/rbac/core/role-policy.ts` (permission evaluation)
+- `src/rbac/policy.ts` (permissions, subjects, scopes, and subject resource helpers)
+- `src/rbac/types.ts` (RBAC type contract derived from the runtime policy)
+- `src/rbac/role-definitions.ts` (declarative role rules plus anonymous/system rules)
+- `src/rbac/role-hierarchy.ts` (role inheritance and minimum-role helpers)
+- `src/rbac/ability.ts` (CASL ability builder and scope-to-condition mapping)
+- `src/rbac/authorizer.ts` (service-facing authorization wrapper)
+- `src/security/actor.ts` (request actor with cached CASL ability)
 
 ## Getting started
 
@@ -253,7 +257,6 @@ Main npm scripts (from `package.json`):
 - `npm run dev`: starts the API with Nodemon + regenerates tsoa spec/routes on changes.
 - `npm run build`: generates tsoa spec/routes then compiles TypeScript to `dist/`.
 - `npm start`: builds first via `prestart`, then runs the compiled server (`node ./dist/server.js`).
-- `npm test`: currently a placeholder (no automated test suite configured yet).
 - `npm run script -- --help`: lists available project scripts.
 - `npm run script -- create-user`: interactive user creation script.
 - `npm run format`: formats code with Biome.
@@ -380,23 +383,23 @@ If a gateway middleware or handler fails and the client sent an acknowledgement 
 
 The current public API is split into **Auth** and **Users** modules (generated docs provide full schemas and examples):
 
-| Method | Path | Description | Auth | Minimum role |
+| Method | Path | Description | Auth | Authorization |
 | --- | --- | --- | --- | --- |
 | POST | `/auth/register` | Register an account (multipart) | Public | - |
 | POST | `/auth/login` | Login and receive a JWT | Public (rate-limited) | - |
-| GET | `/users/search` | Search users with query filters, sorting, ranges, and pagination | Bearer JWT | `USER` |
-| GET | `/users/:id` | Get user by id | Bearer JWT | `USER` |
-| GET | `/users` | Get users | Bearer JWT | `USER` |
-| POST | `/users` | Create user (multipart) | Bearer JWT | `MANAGER` |
-| PUT | `/users/:id` | Update user profile | Bearer JWT | `USER` |
-| PUT | `/users/:id/status` | Enable/disable user | Bearer JWT | `MANAGER` |
-| PUT | `/users/:id/role` | Promote/demote user role | Bearer JWT | `ADMIN` |
-| PUT | `/users/:id/password` | Update password | Bearer JWT | `USER` |
-| PUT | `/users/:id/email` | Update email | Bearer JWT | `USER` |
-| PUT | `/users/:id/username` | Update username | Bearer JWT | `USER` |
-| PUT | `/users/:id/picture` | Update user picture (multipart) | Bearer JWT | `USER` |
-| DELETE | `/users/:id/picture` | Delete user picture | Bearer JWT | `USER` |
-| DELETE | `/users/:id` | Delete user | Bearer JWT | `ADMIN` |
+| GET | `/users/search` | Search users with query filters, sorting, ranges, and pagination | Bearer JWT | CASL service policy |
+| GET | `/users/:id` | Get user by id | Bearer JWT | CASL service policy |
+| GET | `/users` | Get users | Bearer JWT | CASL service policy |
+| POST | `/users` | Create user (multipart) | Bearer JWT | CASL service policy |
+| PUT | `/users/:id` | Update user profile | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/status` | Enable/disable user | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/role` | Promote/demote user role | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/password` | Update password | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/email` | Update email | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/username` | Update username | Bearer JWT | CASL service policy |
+| PUT | `/users/:id/picture` | Update user picture (multipart) | Bearer JWT | CASL service policy |
+| DELETE | `/users/:id/picture` | Delete user picture | Bearer JWT | CASL service policy |
+| DELETE | `/users/:id` | Delete user | Bearer JWT | CASL service policy |
 
 ### Example requests
 
@@ -507,37 +510,58 @@ ADMIN
         └── USER
 ```
 
-Internally, the RBAC engine also defines:
+Runtime execution contexts also include non-persisted actor kinds:
 
 - `ANONYMOUS` (for unauthenticated execution context)
-- `JOKER` (wildcard / system-level role)
+- `SYSTEM` (for scripts/internal execution, mapped to the `*`/`all` CASL wildcard)
 
-### Permission format + scopes
+### CASL abilities
 
-Permissions follow this pattern:
+Service-level authorization uses `@casl/ability`. Rules are defined as `permission + optional access scope`; each permission carries its CASL action string and subject (for example, `Permission.User.UpdateEmail` maps to `user.update-email` on `User`). The app currently exposes a single resource subject, `User`, but the RBAC contract is ready for more subjects by extending `Subject` and `Permission` in `src/rbac/policy.ts`, plus the relevant subject union types in `src/rbac/types.ts`. Role policy is declarative and lives in `src/rbac/role-definitions.ts`; `src/rbac/ability.ts` translates those definitions into CASL rules.
+
+The role definition format is:
 
 ```text
-resource:action[:scope]
+role: Role.ADMIN
+includes: [Role.MANAGER, Role.USER]
+rules: [
+  { permission: Permission.User.UpdateRole, access: "managed" },
+  { permission: Permission.User.UpdateEmail, access: "included" }
+]
 ```
 
-Scopes:
+Supported access values:
 
-- `own`: only the actor’s own resource (e.g., update *your* profile)
-- `managed`: only resources belonging to *included lower roles* (not the same role)
-- `all` or `` : included roles *including the same role*
+- no `access`: no subject condition, e.g. read any user.
+- `own`: only the actor's own subject (`id = actor.id`).
+- `managed`: included lower roles only, excluding the actor's own role.
+- `included`: included roles including the actor's own role.
 
-Examples:
+Rules are allowed by default. A rule can set `effect: "deny"` to emit a CASL `cannot(...)` rule when a specific inherited permission needs to be blocked.
 
-- `user:read`
-- `user:update-email:own`
-- `user:update-role:managed`
-- `*:*` (wildcard)
+Current rule mapping:
+
+- `USER` can read users and update/delete-picture on their own `User` subject (`id = actor.id`).
+- `MANAGER` inherits user self-management and can create users/update status for managed roles (`USER`).
+- `ADMIN` can manage lower roles (`MANAGER`, `USER`) for delete/update-role, and can update profile/email/password/username/picture/delete-picture for all included roles (`ADMIN`, `MANAGER`, `USER`).
+- `ANONYMOUS` has no User abilities by default; unauthenticated reads are not allowed at service level.
+- `SYSTEM` receives CASL `*`/`all` wildcard access for scripts/internal workflows.
+
+Definition examples:
+
+- `{ permission: Permission.User.Read }` becomes `can("user.read", "User")`.
+- `{ permission: Permission.User.UpdateEmail, access: "own" }` becomes a CASL rule constrained by actor id.
+- `{ permission: Permission.User.UpdateRole, access: "managed" }` becomes a CASL rule constrained by managed roles. For role changes, the authorization target includes both the user's current role and the assigned role, so one check protects the target user and the destination role.
+
+The RBAC policy is validated when `src/rbac/role-hierarchy.ts` loads. Invalid configurations such as duplicate roles, missing role definitions, inheritance cycles, unknown included roles, unknown subjects, or incompatible permission/access combinations fail fast with an explicit `Invalid RBAC policy` error.
+
+To add a new subject later, extend `Subject`, add the relevant entries under `Permission`, and add subject-specific scope conditions in `src/rbac/ability.ts` only if that subject needs scoped rules.
 
 ### Enforcement strategy
 
-- **Authentication + minimum role (REST)** is handled by tsoa `@Security` and `src/api/rest/middlewares/auth.middleware.ts`.
-- **Authentication + minimum role (GraphQL)** is handled by type-graphql middlewares in `src/api/graphql/middlewares/auth.middleware.ts`.
-- **Fine-grained authorization** is enforced inside services with `actor.can(...)` / `actor.canManage(...)` checks.
+- **Authentication (REST)** is handled by tsoa `@Security` and `src/api/rest/middlewares/auth.middleware.ts`.
+- **Authentication (GraphQL)** is handled by type-graphql middlewares in `src/api/graphql/middlewares/auth.middleware.ts`.
+- **Fine-grained authorization** is enforced inside services through `src/rbac/authorizer.ts`, backed by CASL `ability.can(action, subject)` checks.
 
 This keeps controllers thin and ensures authorization remains consistent even if services are used outside the HTTP layer (e.g., scripts).
 
@@ -604,13 +628,7 @@ src/
   mappers/                      Transformation helpers between representations and transport shapes.
   models/                       Mongoose/Typegoose persistence models.
   plugins/                      Reusable model plugins for query pagination, delete protection, and version updates.
-  rbac/                         Role-based access-control engine and policy graph.
-    constants/                  RBAC operations, permissions, and role-definition constants.
-    contracts/                  RBAC-specific interfaces for roles, edges, permissions, and actors.
-    core/                       Role graph and policy-evaluation logic.
-    enums/                      RBAC-specific enums.
-    models/                     RBAC actor models and runtime authorization state.
-    types/                      RBAC type helpers for actions, scopes, resources, and operations.
+  rbac/                         Declarative RBAC policy translated into CASL abilities.
   security/                     Access-claims, grants, and actor helpers around authentication.
   services/                     Application services and business-logic orchestration, including dedicated auth/user services.
   types/                        Shared TypeScript utility types used across layers.

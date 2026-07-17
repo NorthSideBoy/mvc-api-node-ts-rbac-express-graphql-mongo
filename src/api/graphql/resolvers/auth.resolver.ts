@@ -15,7 +15,9 @@ import BaseResolver from "./base.resolver";
 
 @Resolver()
 export default class AuthResolver extends BaseResolver {
-	private readonly authService = new AuthService();
+	private authService(ctx: GraphQLContext): AuthService {
+		return new AuthService(ctx.req.context);
+	}
 
 	@Mutation(() => AuthenticatedUserGQL)
 	async register(
@@ -25,7 +27,7 @@ export default class AuthResolver extends BaseResolver {
 		upload?: Promise<FileUpload>,
 	): Promise<AuthenticatedUserGQL> {
 		const picture = await this.handleUpload(upload);
-		const result = await this.authService.register(
+		const result = await this.authService(ctx).register(
 			Object.assign({ picture }, data),
 			{ ip: clientIp(ctx.req) },
 		);
@@ -40,7 +42,7 @@ export default class AuthResolver extends BaseResolver {
 		@Ctx() ctx: GraphQLContext,
 		@Arg("data") data: LoginUserGQL,
 	): Promise<AuthenticatedUserGQL> {
-		const result = await this.authService.login(data, {
+		const result = await this.authService(ctx).login(data, {
 			ip: clientIp(ctx.req),
 		});
 		const gql = mapper.toClass(AuthenticatedUserGQL, result);

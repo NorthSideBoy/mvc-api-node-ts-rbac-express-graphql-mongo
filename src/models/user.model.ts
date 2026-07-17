@@ -19,7 +19,7 @@ import type { EntityModelType } from "./entity.model";
 import { File } from "./file.model";
 import { Person } from "./person.model";
 
-type UserModelType = EntityModelType<typeof User>;
+type UserModel = EntityModelType<typeof User>;
 
 @pre<User>("save", async function () {
 	const isHash = /^\$2[aby]\$\d{2}\$[./A-Za-z0-9]{53}$/;
@@ -80,23 +80,23 @@ export class User extends Person {
 		return await hasher.compare(plain, this.password);
 	}
 
-	static async findByEmail(this: UserModelType, email: string) {
+	static async findByEmail(this: UserModel, email: string) {
 		// biome-ignore lint: Mongoose return type handled by Typegoose
 		return await this.findOne({ email });
 	}
 
-	static async findByUsername(this: UserModelType, username: string) {
+	static async findByUsername(this: UserModel, username: string) {
 		// biome-ignore lint: Mongoose return type handled by Typegoose
 		return await this.findOne({ username });
 	}
 
-	static async findOneByRole(this: UserModelType, role: Role) {
+	static async findOneByRole(this: UserModel, role: Role) {
 		// biome-ignore lint: Mongoose return type handled by Typegoose
 		return await this.findOne({ role });
 	}
 
 	static async updatePassword(
-		this: UserModelType,
+		this: UserModel,
 		id: string,
 		password: string,
 	) {
@@ -107,7 +107,7 @@ export class User extends Person {
 	}
 
 	static async isUsernameAvailable(
-		this: UserModelType,
+		this: UserModel,
 		username: string,
 		id?: string,
 	): Promise<boolean> {
@@ -120,7 +120,7 @@ export class User extends Person {
 	}
 
 	static async isEmailAvailable(
-		this: UserModelType,
+		this: UserModel,
 		email: string,
 		id?: string,
 	): Promise<boolean> {
@@ -133,6 +133,6 @@ export class User extends Person {
 	}
 }
 
-const userModel = getModelForClass(User) as UserModelType;
+const userModel = getModelForClass(User) as UserModel;
 
 export default userModel;

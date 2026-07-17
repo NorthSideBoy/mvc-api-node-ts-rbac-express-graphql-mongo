@@ -31,7 +31,9 @@ export default class AuthService extends BaseService {
 		const user = await this.userHelper.create(decoded);
 		const token = tokenizer.sign(user.sign);
 		this.emit(EVENTS.AUTH.ACCOUNT_REGISTERED, {
-			data: { id: user.id, email: user.email, ip: metadata.ip },
+			id: user.id,
+			email: user.email,
+			ip: metadata.ip,
 		});
 
 		return this.toAuthenticated(user.dto(), token);
@@ -41,15 +43,16 @@ export default class AuthService extends BaseService {
 		input: LoginUser,
 		metadata: AuthEventMetadata,
 	): Promise<AuthenticatedUser> {
-		const decoded = decode(loginUserCodec, input);
-		const user = await User.findByEmail(decoded.email);
+		const user = await User.findByEmail(input.email);
 		if (!user) throw new InvalidUserCredentialsError();
-		const isValid = await user.comparePassword(decoded.password);
+		const isValid = await user.comparePassword(input.password);
 		if (!isValid) throw new InvalidUserCredentialsError();
 		const token = tokenizer.sign(user.sign);
 		const authenticated = this.toAuthenticated(user.dto(), token);
 		this.emit(EVENTS.AUTH.ACCOUNT_LOGGED_IN, {
-			data: { id: user.id, email: user.email, ip: metadata.ip },
+			id: user.id,
+			email: user.email,
+			ip: metadata.ip,
 		});
 
 		return authenticated;

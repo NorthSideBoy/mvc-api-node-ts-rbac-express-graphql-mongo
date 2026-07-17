@@ -3,7 +3,7 @@ import { authorize } from "../../common/utils/auth.util";
 import type { SocketEventMiddleware } from "../types/socket-event-middleware.type";
 
 export function authMiddleware(
-	allowed: Role[],
+	allowedRoles: Role[],
 	securityName = "Bearer",
 ): SocketEventMiddleware {
 	return async (ctx, next) => {
@@ -13,7 +13,7 @@ export function authMiddleware(
 					? ctx.socket.handshake.auth.token
 					: ctx.socket.handshake.headers.authorization
 				: ctx.socket.handshake.headers.authorization;
-		const access = await authorize(authorization, securityName, allowed);
+		const access = await authorize(authorization, securityName, allowedRoles);
 		ctx.access = access;
 		ctx.socket.data.access = access;
 		await next();

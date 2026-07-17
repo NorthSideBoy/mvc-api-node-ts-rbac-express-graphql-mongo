@@ -1,5 +1,6 @@
 import { EventEmitter } from "node:events";
 import type ExecutionContext from "../../context/execution-context";
+import { context as executionContext } from "../../utils/context.util";
 import { logger } from "../../utils/logger.util";
 import type { Event } from "../types/event.type";
 import type { EventMap } from "../types/event-map.type";
@@ -28,10 +29,8 @@ class EventBus extends EventEmitter {
 		return new EventBus();
 	}
 
-	publish<K extends keyof EventMap>(
-		event: Event<K>,
-		context: ExecutionContext,
-	): boolean {
+	publish<K extends keyof EventMap>(event: Event<K>): boolean {
+		const context = executionContext.get();
 		logger.info(
 			{
 				event: eventLog(event),

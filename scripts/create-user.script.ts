@@ -22,7 +22,7 @@ export default class CreateUser extends BaseScript {
 	readonly description = "Create a user";
 
 	async run(): Promise<void> {
-		const userService = new UserService(this.ctx);
+		const userService = new UserService();
 		const data: Partial<DTO> = { enable: true };
 
 		const answer = await confirm({

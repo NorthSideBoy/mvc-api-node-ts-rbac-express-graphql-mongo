@@ -6,12 +6,12 @@ import { authorize } from "../../common/utils/auth.util";
 export async function expressAuthentication(
 	request: ExtendedRequest,
 	securityName: string,
-	allowed: Role[],
+	allowedRoles: Role[],
 ): Promise<AccessGrant> {
 	const access = await authorize(
 		request.headers.authorization,
 		securityName,
-		allowed,
+		allowedRoles,
 	);
 	request.access = access;
 	return access;

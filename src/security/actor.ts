@@ -1,18 +1,36 @@
 import { Kind } from "../enums/kind.enum";
-import { Role } from "../rbac/enums/role.enum";
-import { default as RBACActor } from "../rbac/models/actor.model";
+import type { Role } from "../enums/role.enum";
+import { type AppAbility, defineAbilityFor } from "../rbac";
 import type { AccessClaims } from "./access-claims";
 
-export default abstract class BaseActor extends RBACActor {
+type ActorAudit = {
+	id: string;
+	role: Role | Kind.ANONYMOUS | Kind.SYSTEM;
+};
+
+export default abstract class BaseActor {
 	abstract readonly kind: Kind;
+	private cachedAbility?: AppAbility;
 
 	protected constructor(
-		id: string,
-		role: Role,
+		public readonly id: string,
+		public readonly role: Role | null,
 		public readonly username: string,
 		public readonly enable: boolean,
-	) {
-		super(id, role);
+	) {}
+
+	get ability(): AppAbility {
+		this.cachedAbility ??= defineAbilityFor(this);
+
+		return this.cachedAbility;
+	}
+
+	get audit(): ActorAudit {
+		return {
+			id: this.id,
+			role:
+				this.role ?? (this.kind === Kind.SYSTEM ? Kind.SYSTEM : Kind.ANONYMOUS),
+		};
 	}
 }
 
@@ -51,12 +69,7 @@ export class AnonymousActor extends BaseActor {
 	readonly kind = Kind.ANONYMOUS;
 
 	constructor(sessionId?: string) {
-		super(
-			sessionId || crypto.randomUUID(),
-			Role.ANONYMOUS,
-			Kind.ANONYMOUS,
-			true,
-		);
+		super(sessionId || crypto.randomUUID(), null, Kind.ANONYMOUS, true);
 	}
 }
 
@@ -64,7 +77,7 @@ class SystemActor extends BaseActor {
 	readonly kind = Kind.SYSTEM;
 
 	private constructor() {
-		super(process.pid.toString(), Role.JOKER, Kind.SYSTEM, true);
+		super(process.pid.toString(), null, Kind.SYSTEM, true);
 	}
 
 	static create(): SystemActor {
