@@ -273,7 +273,7 @@ Main npm scripts (from `package.json`):
 
 Cron handlers are registered in `src/cron/catalog.ts`; MongoDB stores only their schedule, timezone, and enabled state. The API never accepts executable code or module paths. Missing catalog configurations are inserted on server startup with their safe defaults and remain disabled until an administrator enables them.
 
-The bundled `system-heartbeat` handler defaults to `0 * * * *` in `UTC`. It only writes a structured heartbeat log and is disabled by default.
+The bundled `heartbeat` handler defaults to `0 * * * *` in `UTC`. It writes the structured run log supplied by `BaseJob` followed by its `lup-dup` heartbeat message, and is disabled by default.
 
 Every run is wrapped in `context.runAsync(ExecutionContext.system(), ...)`. Handler factories are also invoked inside that scope, so constructors, nested services, EventBus publications, and logs observe the same `SYSTEM` actor. Jobs enforce `noOverlap`, and scheduler shutdown waits up to 30 seconds for active runs.
 
@@ -288,7 +288,7 @@ Only `ADMIN` actors with the service-level `cron-job.read` or `cron-job.configur
 Example REST configuration:
 
 ```bash
-curl -X PUT http://127.0.0.1:8000/cron-jobs/system-heartbeat \
+curl -X PUT http://127.0.0.1:8000/cron-jobs/heartbeat \
   -H "Authorization: Bearer <ADMIN_JWT>" \
   -H "Content-Type: application/json" \
   -d '{ "expression": "*/15 * * * *", "timezone": "UTC", "enabled": true }'
@@ -417,7 +417,7 @@ If a gateway middleware or handler fails and the client sent an acknowledgement 
 
 ## Endpoint overview
 
-The current public API is split into **Auth** and **Users** modules (generated docs provide full schemas and examples):
+The current public API is split into **Auth**, **Users**, and **Cron jobs** modules (generated docs provide full schemas and examples):
 
 | Method | Path | Description | Auth | Authorization |
 | --- | --- | --- | --- | --- |
@@ -626,10 +626,11 @@ dist/                           Compiled JavaScript output; every subfolder mirr
 src/
   DTOs/                         Transfer contracts exchanged between layers and API boundaries.
     auth/                       Authentication payloads such as login, register, and authenticated-user responses.
+    cron-job/                   Cron scheduling configuration input and output contracts.
     file/                       File creation, update, and persisted metadata contracts.
     storage/                    Low-level storage command contracts.
     user/                       User profile, search, and user-management contracts.
-  api/                          Transport-layer entry points shared by REST and GraphQL.
+  api/                          REST, GraphQL, and Socket.IO transport-layer entry points.
     common/                     Shared API helpers for auth, authorization, and request context glue.
     graphql/                    GraphQL transport layer built around type-graphql.
       middlewares/              GraphQL middleware chain for auth, context, errors, and rate limiting.
@@ -637,6 +638,7 @@ src/
       schemas/                  GraphQL schema classes exposed to clients.
         auth/                   Login/register schema types.
         common/                 Shared schema pieces such as pagination, person, and result types.
+        cron-job/               Cron scheduling configuration schema types.
         file/                   File-related schema types.
         user/                   User query and mutation schema types.
     socket.io/                  Realtime transport layer built on Socket.IO.
@@ -676,6 +678,7 @@ src/
   validation/                   Runtime validation layer built on Zod.
     codecs/                     Input/output codecs grouped by bounded area.
       auth/                     Validation codecs for auth payloads.
+      cron-job/                 Validation codecs for cron scheduling configuration.
       file/                     Validation codecs for file payloads.
       common/                   Validation codecs for shared entity, pagination, query, person, and result payloads.
       storage/                  Validation codecs for storage commands.
