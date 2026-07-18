@@ -8,7 +8,7 @@ import UserHelper from "../helpers/user.helper";
 import User from "../models/user.model";
 import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
-import { loginUserCodec } from "../validation/codecs/auth/input/login-user.codec";
+//import { loginUserCodec } from "../validation/codecs/auth/input/login-user.codec";
 import { registerUserCodec } from "../validation/codecs/auth/input/register-user.codec";
 import BaseService from "./base.service";
 

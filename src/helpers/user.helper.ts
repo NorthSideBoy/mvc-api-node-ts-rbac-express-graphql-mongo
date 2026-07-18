@@ -17,10 +17,7 @@ export default class UserHelper {
 	private readonly fileService = new FileService();
 	private readonly storage = new StorageService();
 
-	async validateUserUniqueness(
-		input: RegisterUser | CreateUser,
-		id?: string,
-	): Promise<void> {
+	async validateUserUniqueness(input: RegisterUser | CreateUser, id?: string) {
 		const [isEmailAvailable, isUsernameAvailable] = await Promise.all([
 			User.isEmailAvailable(input.email, id),
 			User.isUsernameAvailable(input.username, id),

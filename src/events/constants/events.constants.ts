@@ -3,6 +3,9 @@ export const EVENTS = {
 		ACCOUNT_REGISTERED: "account.registered",
 		ACCOUNT_LOGGED_IN: "account.logged_in",
 	} as const,
+	CRON_JOB: {
+		CONFIGURED: "cron_job.configured",
+	} as const,
 	USER: {
 		READ: "user.read",
 		CREATED: "user.created",

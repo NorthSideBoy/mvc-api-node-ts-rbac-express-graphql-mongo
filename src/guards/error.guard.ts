@@ -1,4 +1,5 @@
 import { GraphQLError } from "graphql";
+import { ValidateError } from "tsoa";
 import { ZodError } from "zod";
 import { ApplicationError } from "../errors/core/application-error";
 import CoreError from "../errors/core/core.error";
@@ -22,6 +23,10 @@ export function isHttpError(error: unknown): error is HttpError {
 
 export function isZodError(error: unknown): error is ZodError {
 	return error instanceof ZodError;
+}
+
+export function isValidateError(error: unknown): error is ValidateError {
+	return error instanceof ValidateError;
 }
 
 export function isGraphQLError(error: unknown): error is GraphQLError {

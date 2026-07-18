@@ -33,9 +33,7 @@ import { BaseController } from "./base.controller";
 @Route("users")
 @Tags("Users")
 export class UserController extends BaseController {
-	private userService(): UserService {
-		return new UserService();
-	}
+	private readonly userService = new UserService();
 
 	/**
 	 * @summary Search users
@@ -49,7 +47,7 @@ export class UserController extends BaseController {
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
 	async search(@Queries() query: QueryUsers): Promise<Search<User>> {
-		return await this.userService().query(query);
+		return await this.userService.query(query);
 	}
 
 	/**
@@ -63,7 +61,7 @@ export class UserController extends BaseController {
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
 	async findById(@Path() id: string): Promise<User | null> {
-		return await this.userService().findById(id);
+		return await this.userService.findById(id);
 	}
 
 	/**
@@ -77,7 +75,7 @@ export class UserController extends BaseController {
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
 	async findAll(): Promise<User[]> {
-		return await this.userService().findAll();
+		return await this.userService.findAll();
 	}
 
 	/**
@@ -105,7 +103,7 @@ export class UserController extends BaseController {
 		@UploadedFile() upload?: Express.Multer.File,
 	): Promise<User> {
 		this.setStatus(201);
-		return await this.userService().create({
+		return await this.userService.create({
 			firstname,
 			lastname,
 			username,
@@ -136,7 +134,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() body: UpdateUserProfile,
 	): Promise<Result> {
-		return await this.userService().updateProfile(id, body);
+		return await this.userService.updateProfile(id, body);
 	}
 
 	/**
@@ -156,7 +154,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() body: UpdateUserStatus,
 	): Promise<Result> {
-		return await this.userService().updateStatus(id, body);
+		return await this.userService.updateStatus(id, body);
 	}
 
 	/**
@@ -176,7 +174,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() role: UpdateUserRole,
 	): Promise<Result> {
-		return await this.userService().updateRole(id, role);
+		return await this.userService.updateRole(id, role);
 	}
 
 	/**
@@ -196,7 +194,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() body: UpdateUserPassword,
 	): Promise<Result> {
-		return await this.userService().updatePassword(id, body);
+		return await this.userService.updatePassword(id, body);
 	}
 
 	/**
@@ -217,7 +215,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() body: UpdateUserEmail,
 	): Promise<Result> {
-		return await this.userService().updateEmail(id, body);
+		return await this.userService.updateEmail(id, body);
 	}
 
 	/**
@@ -238,7 +236,7 @@ export class UserController extends BaseController {
 		@Path() id: string,
 		@Body() body: UpdateUserUsername,
 	): Promise<Result> {
-		return await this.userService().updateUsername(id, body);
+		return await this.userService.updateUsername(id, body);
 	}
 
 	/**
@@ -260,7 +258,7 @@ export class UserController extends BaseController {
 		@UploadedFile() upload: Express.Multer.File,
 	): Promise<Result> {
 		const input = { picture: this.handleUpload(upload) };
-		return await this.userService().updatePicture(id, input);
+		return await this.userService.updatePicture(id, input);
 	}
 
 	/**
@@ -275,7 +273,7 @@ export class UserController extends BaseController {
 	@Security("Bearer", [Role.ADMIN])
 	@Middlewares([contextMiddleware])
 	async delete(@Path() id: string): Promise<Result> {
-		return await this.userService().delete(id);
+		return await this.userService.delete(id);
 	}
 
 	/**
@@ -290,6 +288,6 @@ export class UserController extends BaseController {
 	@Security("Bearer", [Role.USER])
 	@Middlewares([contextMiddleware])
 	async deletePicture(@Path() id: string): Promise<Result> {
-		return await this.userService().deletePicture(id);
+		return await this.userService.deletePicture(id);
 	}
 }

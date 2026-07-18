@@ -4,6 +4,7 @@ import type { UpdateUserRole } from "../../DTOs/user/input/update-user-role.dto"
 import type { UpdateUserStatus } from "../../DTOs/user/input/update-user-status.dto";
 import type { UpdateUserUsername } from "../../DTOs/user/input/update-user-username.dto";
 import type { User } from "../../DTOs/user/output/user.dto";
+import type { CronJobKey } from "../../enums/cron-job-key.enum";
 import { EVENTS } from "../constants/events.constants";
 import type { EventPayload } from "./event-payload.type";
 
@@ -15,6 +16,14 @@ export interface EventMap {
 	//Auth
 	[EVENTS.AUTH.ACCOUNT_REGISTERED]: AuthRef;
 	[EVENTS.AUTH.ACCOUNT_LOGGED_IN]: AuthRef;
+
+	// Cron jobs
+	[EVENTS.CRON_JOB.CONFIGURED]: EventPayload<{
+		key: CronJobKey;
+		enabled: boolean;
+		expression: string;
+		timezone: string;
+	}>;
 
 	//User
 	[EVENTS.USER.READ]: UserRef;

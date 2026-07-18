@@ -2,7 +2,7 @@ import { Role } from "../enums/role.enum";
 import { AccessScope, Permission } from "./policy";
 import type { AbilityRule, RoleDefinition } from "./types";
 
-const { User, All } = Permission;
+const { User, CronJob, All } = Permission;
 const { Own, Managed, Included } = AccessScope;
 
 export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
@@ -10,6 +10,8 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
 		role: Role.ADMIN,
 		includes: [Role.MANAGER, Role.USER],
 		rules: [
+			{ permission: CronJob.Read },
+			{ permission: CronJob.Configure },
 			{ permission: User.Delete, access: Managed },
 			{ permission: User.UpdateRole, access: Managed },
 			{ permission: User.UpdateProfile, access: Included },

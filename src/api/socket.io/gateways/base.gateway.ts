@@ -61,7 +61,7 @@ export abstract class BaseGateway {
 		socket: Socket,
 		eventName: string,
 		rawArgs: unknown[],
-	): Promise<void> {
+	) {
 		const ctx = this.buildContext(socket, eventName, rawArgs);
 		try {
 			await this.run(ctx, route.middlewares, async () => {
@@ -100,9 +100,9 @@ export abstract class BaseGateway {
 		ctx: SocketEventContext,
 		middlewares: SocketEventMiddleware[],
 		final: () => Promise<void>,
-	): Promise<void> {
+	) {
 		let idx = -1;
-		const next = async (i: number): Promise<void> => {
+		const next = async (i: number) => {
 			if (i <= idx) throw new Error("next() called multiple times");
 			idx = i;
 			const mw = middlewares[i];

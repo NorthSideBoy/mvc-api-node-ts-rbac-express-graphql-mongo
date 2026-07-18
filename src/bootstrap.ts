@@ -3,7 +3,7 @@ import { database } from "./configs/mongoose.config";
 import { listeners } from "./listeners";
 import { logger } from "./utils/logger.util";
 
-export const bootstrap = async (): Promise<void> => {
+export const bootstrap = async () => {
 	logger.info(
 		{ mode: config.server.nodeEnv, log_level: config.server.logLevel },
 		"[APP] starting",
@@ -12,8 +12,8 @@ export const bootstrap = async (): Promise<void> => {
 	listeners.initialize();
 };
 
-export const shutdown = async (): Promise<void> => {
-	await database.disconnect();
+export const shutdown = async () => {
 	listeners.shutdown();
+	await database.disconnect();
 	logger.info("[APP] stopped");
 };

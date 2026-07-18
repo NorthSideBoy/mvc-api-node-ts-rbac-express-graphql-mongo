@@ -4,6 +4,9 @@
 	"description": "RESTful API RBAC boilerplate with Node.js, Express, GraphQL, Socket.IO, TypeScript, TSOA, MongoDB and MVC pattern",
 	"type": "commonjs",
 	"main": "index.js",
+	"engines": {
+		"node": ">=20.19.0"
+	},
 	"scripts": {
 		"postinstall": "tsoa spec-and-routes",
 		"predev": "tsoa spec-and-routes",
@@ -51,6 +54,7 @@
 		"mongoose-autopopulate": "^1.2.1",
 		"mongoose-paginate-v2": "^1.9.4",
 		"multer": "^2.0.2",
+		"node-cron": "^4.6.0",
 		"pino": "^10.3.1",
 		"pino-http": "^11.0.0",
 		"rate-limiter-flexible": "^9.1.1",

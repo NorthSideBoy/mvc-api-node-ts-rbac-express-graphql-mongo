@@ -15,6 +15,7 @@ import swaggerUi from "swagger-ui-express";
 import { buildSchema } from "type-graphql";
 import { formatGraphQLError } from "./api/graphql/middlewares/error.middleware";
 import AuthResolver from "./api/graphql/resolvers/auth.resolver";
+import CronJobResolver from "./api/graphql/resolvers/cron-job.resolver";
 import UserResolver from "./api/graphql/resolvers/user.resolver";
 import type { GraphQLContext } from "./api/graphql/types/graphql-context.type";
 import swaggerDocument from "./api/rest/docs/swagger.json";
@@ -26,6 +27,7 @@ import { bridges } from "./api/socket.io/bridges/socket-bridge";
 import { gateways } from "./api/socket.io/gateways";
 import { bootstrap, shutdown } from "./bootstrap";
 import { config } from "./configs/env.config";
+import { cronScheduler } from "./cron/scheduler";
 import { Role } from "./enums/role.enum";
 import { logger } from "./utils/logger.util";
 
@@ -96,7 +98,7 @@ RegisterRoutes(app, {
 });
 app.use(errorMiddleware);
 
-const start = async (): Promise<void> => {
+const start = async () => {
 	await bootstrap();
 	bridges.initialize(io);
 	gateways.initialize(io);
@@ -114,11 +116,12 @@ const start = async (): Promise<void> => {
 	});
 
 	const schema = await buildSchema({
-		resolvers: [AuthResolver, UserResolver],
+		resolvers: [AuthResolver, CronJobResolver, UserResolver],
 	});
 
 	const apollo = new ApolloServer<GraphQLContext>({
 		schema,
+		stopOnTerminationSignals: false,
 		plugins: [ApolloServerPluginLandingPageLocalDefault({ footer: false })],
 		formatError: formatGraphQLError,
 	});
@@ -134,45 +137,72 @@ const start = async (): Promise<void> => {
 			},
 		}),
 	);
-
-	server.listen(config.server.port, config.server.host, () => {
-		logger.info(
-			{
-				host: config.server.host,
-				port: config.server.port,
-				cors: config.cors.origin,
-			},
-			"[HTTP] listening",
-		);
-		logger.info(`Swagger docs available at: ${config.server.publicUrl}/docs`);
-		logger.info(
-			`GraphQL sandbox available at: ${config.server.publicUrl}/graphql`,
-		);
-		logger.info(
-			`Socket.io admin-ui available at: ${config.server.publicUrl}/socket-ui`,
-		);
-	});
-
-	const gracefulShutdown = async (): Promise<void> => {
-		logger.info("[HTTP] shutting down");
-		logger.info("[Socket.IO] shutting down");
-		gateways.shutdown();
-		bridges.shutdown();
-
-		io.close(() => {
-			server.close(async () => {
-				await apollo.stop();
-				await shutdown();
-				process.exit(0);
+	try {
+		await cronScheduler.initialize();
+		await new Promise<void>((resolve, reject) => {
+			const onError = (error: Error) => reject(error);
+			server.once("error", onError);
+			server.listen(config.server.port, config.server.host, () => {
+				server.off("error", onError);
+				resolve();
 			});
 		});
+	} catch (error) {
+		await cronScheduler.shutdown();
+		gateways.shutdown();
+		bridges.shutdown();
+		await apollo.stop();
+		await shutdown();
+		throw error;
+	}
+
+	logger.info(
+		{
+			host: config.server.host,
+			port: config.server.port,
+			cors: config.cors.origin,
+		},
+		"[HTTP] listening",
+	);
+	logger.info(`Swagger docs available at: ${config.server.publicUrl}/docs`);
+	logger.info(
+		`GraphQL sandbox available at: ${config.server.publicUrl}/graphql`,
+	);
+	logger.info(
+		`Socket.io admin-ui available at: ${config.server.publicUrl}/socket-ui`,
+	);
+
+	let shuttingDown = false;
+	const gracefulShutdown = async () => {
+		if (shuttingDown) return;
+		shuttingDown = true;
+
+		logger.info("[HTTP] shutting down");
+		try {
+			const httpShutdown = server.listening
+				? new Promise<void>((resolve, reject) => {
+						server.close((error) => (error ? reject(error) : resolve()));
+					})
+				: Promise.resolve();
+			await cronScheduler.shutdown();
+			logger.info("[Socket.IO] shutting down");
+			gateways.shutdown();
+			bridges.shutdown();
+			await new Promise<void>((resolve) => io.close(() => resolve()));
+			await httpShutdown;
+			await apollo.stop();
+			await shutdown();
+		} catch (error) {
+			logger.error({ error }, "[APP] graceful shutdown failed");
+			process.exitCode = 1;
+		}
 	};
 
-	process.on("SIGINT", gracefulShutdown);
-	process.on("SIGTERM", gracefulShutdown);
+	process.once("SIGINT", gracefulShutdown);
+	process.once("SIGTERM", gracefulShutdown);
 };
 
 start().catch((error) => {
-	logger.error("Failed to start server:", error);
+	logger.error({ error }, "Failed to start server");
 	process.exit(1);
 });

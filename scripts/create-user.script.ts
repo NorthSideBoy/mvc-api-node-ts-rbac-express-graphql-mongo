@@ -21,7 +21,7 @@ export default class CreateUser extends BaseScript {
 	readonly name = "create-user";
 	readonly description = "Create a user";
 
-	async run(): Promise<void> {
+	async run() {
 		const userService = new UserService();
 		const data: Partial<DTO> = { enable: true };
 

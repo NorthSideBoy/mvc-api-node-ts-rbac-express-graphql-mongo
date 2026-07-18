@@ -29,7 +29,7 @@ function list(): void {
 	}
 }
 
-async function main(): Promise<void> {
+async function main() {
 	const name = process.argv[2];
 	let bootstrapped = false;
 	try {

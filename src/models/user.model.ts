@@ -95,11 +95,7 @@ export class User extends Person {
 		return await this.findOne({ role });
 	}
 
-	static async updatePassword(
-		this: UserModel,
-		id: string,
-		password: string,
-	) {
+	static async updatePassword(this: UserModel, id: string, password: string) {
 		const hash = await hasher.encrypt(password);
 
 		// biome-ignore lint: Mongoose return type handled by Typegoose

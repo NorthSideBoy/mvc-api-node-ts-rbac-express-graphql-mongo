@@ -1,6 +1,6 @@
 {
 	"entryFile": "src/server.ts",
-	"noImplicitAdditionalProperties": "throw",
+	"noImplicitAdditionalProperties": "throw-on-extras",
 	"controllerPathGlobs": ["src/api/rest/controllers/*.ts"],
 	"spec": {
 		"outputDirectory": "src/api/rest/docs",

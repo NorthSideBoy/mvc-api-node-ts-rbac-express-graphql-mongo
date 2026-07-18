@@ -6,6 +6,7 @@ import {
 	isError,
 	isHttpError,
 	isSyntaxError,
+	isValidateError,
 	isZodError,
 } from "../../../guards/error.guard";
 import { logger } from "../../../utils/logger.util";
@@ -29,6 +30,15 @@ export const errorMiddleware: ErrorRequestHandler = (
 			message,
 			code: HttpErrorCode.UnprocessableEntity,
 			metadata: error.issues,
+		});
+	}
+
+	if (isValidateError(error)) {
+		logger.error({ error }, "[HTTP] request validation error");
+		return response.status(422).json({
+			message: error.message,
+			code: HttpErrorCode.UnprocessableEntity,
+			metadata: error.fields,
 		});
 	}
 

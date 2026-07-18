@@ -3,7 +3,7 @@ import { logger } from "../utils/logger.util";
 import { config } from "./env.config";
 
 export const database = {
-	async connect(): Promise<void> {
+	async connect() {
 		try {
 			await mongoose.connect(config.database.connection.uri);
 
@@ -17,7 +17,7 @@ export const database = {
 		}
 	},
 
-	async disconnect(): Promise<void> {
+	async disconnect() {
 		await mongoose.disconnect();
 		logger.info("[MongoDB] disconnected");
 	},

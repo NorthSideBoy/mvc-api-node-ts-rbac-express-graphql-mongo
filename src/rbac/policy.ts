@@ -9,6 +9,7 @@ import type {
 
 export const Subject = {
 	All: "All",
+	CronJob: "CronJob",
 	User: "User",
 } as const;
 
@@ -30,6 +31,10 @@ function definePermissions<
 export const Permission = {
 	[Subject.All]: definePermissions(Subject.All, {
 		Wildcard: "*",
+	}),
+	[Subject.CronJob]: definePermissions(Subject.CronJob, {
+		Read: "cron-job.read",
+		Configure: "cron-job.configure",
 	}),
 	[Subject.User]: definePermissions(Subject.User, {
 		Create: "user.create",

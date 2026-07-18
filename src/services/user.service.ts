@@ -39,6 +39,7 @@ import { idSchema } from "../validation/schemas/common.schemas";
 import BaseService from "./base.service";
 import FileService from "./file.service";
 import StorageService from "./storage.service";
+import { logger } from "../utils/logger.util";
 
 export default class UserService extends BaseService {
 	private readonly storage = new StorageService();
@@ -91,7 +92,7 @@ export default class UserService extends BaseService {
 	}
 
 	async findAll(): Promise<DTO[]> {
-		this.authorize(Permission.User.Read);
+    this.authorize(Permission.User.Read);
 		const users = await User.find();
 
 		return users.map((user) => user.dto());

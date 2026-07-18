@@ -28,6 +28,7 @@ RESTful API boilerplate implementing **MVC** + **RBAC (Role-Based Access Control
 - [Getting started](#getting-started)
 - [Environment variables](#environment-variables)
 - [Scripts](#scripts)
+- [Cron jobs](#cron-jobs)
 - [API documentation](#api-documentation)
 - [GraphQL API](#graphql-api)
 - [Real-time events](#real-time-events)
@@ -61,6 +62,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
 - **Request validation** with Zod (422 responses include validation details).
 - **Rate limiting** for Express + GraphQL (global + stricter login limiter).
 - **Structured logging** with Pino.
+- **Persistent cron scheduling** with node-cron, MongoDB configuration, hot reload, and system execution context.
 - **Lint/format** with Biome.
 
 ## Tech Stack
@@ -106,7 +108,7 @@ Building APIs is easy; building **secure** APIs that scale in complexity is hard
   </tr>
 </table>
 
-Also used: **CASL**, **tsoa**, **Mongoose/Typegoose**, **Zod**, **Pino**, **express-rate-limit**, **Biome**.
+Also used: **CASL**, **tsoa**, **Mongoose/Typegoose**, **Zod**, **Pino**, **node-cron**, **express-rate-limit**, **Biome**.
 GraphQL stack: **Apollo Server**, **type-graphql**
 
 ## Architecture
@@ -121,6 +123,7 @@ This API follows an MVC-style layout (adapted for APIs), with **REST** (tsoa), *
 - **EventBus + listeners**: typed in-process domain events under `src/events` and `src/listeners`.
 - **Services**: contain business logic + authorization rules (`src/services`).
 - **Models**: encapsulate MongoDB persistence (Typegoose/Mongoose), shared entity/person fields, DTO mapping, and reusable plugins (`src/models`, `src/plugins`).
+- **Cron scheduler**: loads persisted configurations, creates registered tasks, and executes handlers under `ExecutionContext.system()` (`src/cron`).
 
 ### Request flow
 
@@ -266,6 +269,37 @@ Main npm scripts (from `package.json`):
 
 > `postinstall`, `predev`, and `prebuild` run `tsoa spec-and-routes` automatically. `prestart` runs `npm run build`.
 
+## Cron jobs
+
+Cron handlers are registered in `src/cron/catalog.ts`; MongoDB stores only their schedule, timezone, and enabled state. The API never accepts executable code or module paths. Missing catalog configurations are inserted on server startup with their safe defaults and remain disabled until an administrator enables them.
+
+The bundled `system-heartbeat` handler defaults to `0 * * * *` in `UTC`. It only writes a structured heartbeat log and is disabled by default.
+
+Every run is wrapped in `context.runAsync(ExecutionContext.system(), ...)`. Handler factories are also invoked inside that scope, so constructors, nested services, EventBus publications, and logs observe the same `SYSTEM` actor. Jobs enforce `noOverlap`, and scheduler shutdown waits up to 30 seconds for active runs.
+
+Every concrete job extends `BaseJob`. Like `BaseService`, the base class captures the current execution context in its constructor. It provides a default no-op `execute()` method and emits one structured log per run with the actor, execution ID, and scheduled time. Jobs with business logic only override `execute()`; the executor remains responsible for binding the privileged system context before constructing them.
+
+Only `ADMIN` actors with the service-level `cron-job.read` or `cron-job.configure` permission can access configuration operations:
+
+- REST: `GET /cron-jobs`, `GET /cron-jobs/:key`, `PUT /cron-jobs/:key`
+- GraphQL queries: `cronJobs`, `cronJob(key)`
+- GraphQL mutation: `configureCronJob(key, data)`
+
+Example REST configuration:
+
+```bash
+curl -X PUT http://127.0.0.1:8000/cron-jobs/system-heartbeat \
+  -H "Authorization: Bearer <ADMIN_JWT>" \
+  -H "Content-Type: application/json" \
+  -d '{ "expression": "*/15 * * * *", "timezone": "UTC", "enabled": true }'
+```
+
+Expressions are validated by node-cron and timezones must be valid IANA names. Set `enabled` to `false` to remove the in-memory task while preserving its configuration. Changes made through the API take effect immediately; direct database changes are loaded on the next server restart.
+
+The current scheduler is designed for a single application process. Its overlap locks and API hot reload are process-local; running multiple API replicas would execute the same enabled jobs independently and each replica could temporarily hold a different schedule. Use a dedicated scheduler worker or distributed coordination before scaling this deployment horizontally.
+
+MongoDB stores desired scheduling configuration, not execution history. Jobs have no automatic retries or downtime catch-up, and the API does not currently expose last-run or active-schedule state. Graceful shutdown waits up to 30 seconds for registered and recently replaced executions, but it does not cancel a handler after that deadline.
+
 ## API documentation
 
 This project ships Swagger UI using `swagger-ui-express`.
@@ -292,6 +326,8 @@ Resolvers live in `src/api/graphql/resolvers` and use type-graphql schema classe
 - Auth mutations: `register`, `login`
 - User queries: `search`, `findById`, `findAll`
 - User mutations: `create`, `updateProfile`, `updateStatus`, `updateRole`, `updatePassword`, `updateEmail`, `updateUsername`, `updatePicture`, `deletePicture`, `delete`
+- Cron job queries: `cronJobs`, `cronJob`
+- Cron job mutation: `configureCronJob`
 
 ### File uploads
 
@@ -306,7 +342,7 @@ This project exposes file uploads in `REST` and `GraphQL` interfaces, backed by 
 
 ## Real-time events
 
-This project includes an in-process domain `EventBus` plus a `Socket.IO` transport layer. Services publish typed domain events once, and the application decides whether to consume them locally (`listeners`) or push them to websocket clients (`bridges`).
+This project includes an in-process domain `EventBus` plus a `Socket.IO` transport layer. Services publish typed domain events once, and the application decides whether to consume them locally (`listeners`) or push them to websocket clients (`bridges`). Cron configuration changes publish `cron_job.configured` for local observability; that event is not bridged to Socket.IO.
 
 ### EventBus implementation
 
@@ -400,6 +436,9 @@ The current public API is split into **Auth** and **Users** modules (generated d
 | PUT | `/users/:id/picture` | Update user picture (multipart) | Bearer JWT | CASL service policy |
 | DELETE | `/users/:id/picture` | Delete user picture | Bearer JWT | CASL service policy |
 | DELETE | `/users/:id` | Delete user | Bearer JWT | CASL service policy |
+| GET | `/cron-jobs` | List persisted cron configurations | ADMIN Bearer JWT | `cron-job.read` |
+| GET | `/cron-jobs/:key` | Get a persisted cron configuration | ADMIN Bearer JWT | `cron-job.read` |
+| PUT | `/cron-jobs/:key` | Update schedule, timezone, or enabled state | ADMIN Bearer JWT | `cron-job.configure` |
 
 ### Example requests
 
@@ -518,7 +557,7 @@ Runtime execution contexts also include non-persisted actor kinds:
 
 ### CASL abilities
 
-Service-level authorization uses `@casl/ability`. Rules are defined as `permission + optional access scope`; each permission carries its CASL action string and subject (for example, `Permission.User.UpdateEmail` maps to `user.update-email` on `User`). The app currently exposes a single resource subject, `User`, but the RBAC contract is ready for more subjects by extending `Subject` and `Permission` in `src/rbac/policy.ts`, plus the relevant subject union types in `src/rbac/types.ts`. Role policy is declarative and lives in `src/rbac/role-definitions.ts`; `src/rbac/ability.ts` translates those definitions into CASL rules.
+Service-level authorization uses `@casl/ability`. Rules are defined as `permission + optional access scope`; each permission carries its CASL action string and subject (for example, `Permission.User.UpdateEmail` maps to `user.update-email` on `User`). The app exposes `User` and `CronJob` resource subjects. Role policy is declarative and lives in `src/rbac/role-definitions.ts`; `src/rbac/ability.ts` translates those definitions into CASL rules.
 
 The role definition format is:
 
@@ -544,7 +583,7 @@ Current rule mapping:
 
 - `USER` can read users and update/delete-picture on their own `User` subject (`id = actor.id`).
 - `MANAGER` inherits user self-management and can create users/update status for managed roles (`USER`).
-- `ADMIN` can manage lower roles (`MANAGER`, `USER`) for delete/update-role, and can update profile/email/password/username/picture/delete-picture for all included roles (`ADMIN`, `MANAGER`, `USER`).
+- `ADMIN` can manage lower roles (`MANAGER`, `USER`), configure cron jobs, and update profile/email/password/username/picture/delete-picture for all included roles (`ADMIN`, `MANAGER`, `USER`).
 - `ANONYMOUS` has no User abilities by default; unauthenticated reads are not allowed at service level.
 - `SYSTEM` receives CASL `*`/`all` wildcard access for scripts/internal workflows.
 
@@ -615,6 +654,7 @@ src/
   configs/                      Environment, database, and runtime configuration loaders.
   constants/                    Cross-cutting constants such as file defaults and Typegoose schema options.
   context/                      Request-scoped execution context and AsyncLocalStorage plumbing.
+  cron/                         Registered cron handlers, catalog, executor, and scheduler lifecycle.
   enums/                        Cross-cutting enums for roles, mime types, visibility, error codes, etc.
   errors/                       Central error hierarchy grouped by concern.
     application/                Domain/application-level business errors for auth, files, tokens, users, etc.

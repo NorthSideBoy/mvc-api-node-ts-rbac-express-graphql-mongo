@@ -23,7 +23,7 @@ type RoomAction = "join" | "leave";
 export default class UserRoomGateway extends BaseGateway {
 	@OnConnect()
 	@UseSocket(authMiddleware([Role.USER]), contextMiddleware())
-	async connect(ctx: SocketEventContext): Promise<void> {
+	async connect(ctx: SocketEventContext) {
 		const userId = ctx.context?.actor.id;
 		if (!userId) {
 			logger.warn(
@@ -43,20 +43,20 @@ export default class UserRoomGateway extends BaseGateway {
 
 	@On("user.subscribe")
 	@UseSocket(authMiddleware([Role.USER]), contextMiddleware())
-	async subscribe(ctx: SocketEventContext<UserRoomPayload>): Promise<void> {
+	async subscribe(ctx: SocketEventContext<UserRoomPayload>) {
 		await this.handleRoom(ctx, "join");
 	}
 
 	@On("user.unsubscribe")
 	@UseSocket(authMiddleware([Role.USER]), contextMiddleware())
-	async unsubscribe(ctx: SocketEventContext<UserRoomPayload>): Promise<void> {
+	async unsubscribe(ctx: SocketEventContext<UserRoomPayload>) {
 		await this.handleRoom(ctx, "leave");
 	}
 
 	private async handleRoom(
 		ctx: SocketEventContext<UserRoomPayload>,
 		action: RoomAction,
-	): Promise<void> {
+	) {
 		const subscriberId = ctx.context?.actor.id;
 
 		if (!subscriberId) {

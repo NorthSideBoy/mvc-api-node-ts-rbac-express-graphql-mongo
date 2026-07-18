@@ -149,7 +149,7 @@ class SocketBridge {
 	private async deliver<K extends keyof EventMap>(
 		event: Event<K>,
 		ctx: ExecutionContext,
-	): Promise<void> {
+	) {
 		const delivery = SOCKET_EVENT_DELIVERY[event.name];
 		if (!delivery) return;
 		const targets = delivery.rooms?.(event, ctx) ?? [];

@@ -41,13 +41,13 @@ export default class StorageService extends BaseService {
 		}
 	}
 
-	private async ensureDirectoryExists(dirPath: string): Promise<void> {
+	private async ensureDirectoryExists(dirPath: string) {
 		const exists = await this.directoryExists(dirPath);
 
 		if (!exists) await fs.mkdir(dirPath, { recursive: true });
 	}
 
-	private async checkDirectory(fullPath: string): Promise<void> {
+	private async checkDirectory(fullPath: string) {
 		const dirPath = path.dirname(fullPath);
 
 		await this.ensureDirectoryExists(dirPath);
@@ -111,7 +111,7 @@ export default class StorageService extends BaseService {
 		return await this.readFile(finalPath);
 	}
 
-	async delete(filepath: string, filename: string): Promise<void> {
+	async delete(filepath: string, filename: string) {
 		const fullPath = this.getFullPath(filepath, filename);
 		const exists = await this.fileExists(fullPath);
 		if (!exists)

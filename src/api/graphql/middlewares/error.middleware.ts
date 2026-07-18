@@ -1,6 +1,10 @@
 import type { GraphQLFormattedError } from "graphql";
 import { HttpErrorCode } from "../../../enums/http-error-code.enum";
-import { isCoreError, isGraphQLError } from "../../../guards/error.guard";
+import {
+	isCoreError,
+	isGraphQLError,
+	isZodError,
+} from "../../../guards/error.guard";
 import { logger } from "../../../utils/logger.util";
 
 export const formatGraphQLError = (
@@ -9,7 +13,21 @@ export const formatGraphQLError = (
 ) => {
 	logger.error({ error }, "[GraphQL] error");
 
-	if (isGraphQLError(error))
+	if (isGraphQLError(error)) {
+		if (isZodError(error.originalError)) {
+			return {
+				message: error.originalError.issues
+					.map((issue) =>
+						issue.path.length > 0
+							? `${issue.path.join(".")}: ${issue.message}`
+							: issue.message,
+					)
+					.join("; "),
+				code: HttpErrorCode.UnprocessableEntity,
+				metadata: error.originalError.issues,
+			};
+		}
+
 		return {
 			message: error.message,
 			code: isCoreError(error.originalError)
@@ -19,6 +37,7 @@ export const formatGraphQLError = (
 				? error.originalError.metadata
 				: error.extensions?.metadata,
 		};
+	}
 
 	return {
 		message: "Internal server error",
