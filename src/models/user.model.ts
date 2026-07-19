@@ -51,11 +51,6 @@ export class User extends Person {
 	password: string;
 
 	@Expose()
-	@field({ filterable: false })
-	@prop({ required: true })
-	birthday: Date;
-
-	@Expose()
 	@field()
 	@prop({ default: false })
 	enable: boolean;

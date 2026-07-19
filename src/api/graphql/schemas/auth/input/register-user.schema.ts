@@ -16,9 +16,6 @@ export default class RegisterUserGQL
 	@Field()
 	email!: string;
 
-	@Field()
-	birthday!: Date;
-
 	@Field({ nullable: true })
 	enable?: boolean;
 }

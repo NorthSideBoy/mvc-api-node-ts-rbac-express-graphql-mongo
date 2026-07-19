@@ -40,7 +40,7 @@ export class AuthController extends BaseController {
 		@FormField() username: string,
 		@FormField() email: string,
 		@FormField() password: string,
-		@FormField() birthday: Date,
+		@FormField() birthday?: Date,
 		@FormField() enable?: boolean,
 		@UploadedFile() upload?: Express.Multer.File,
 	): Promise<AuthenticatedUser> {

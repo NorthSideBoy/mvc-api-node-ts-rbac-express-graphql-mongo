@@ -14,6 +14,11 @@ export class Person extends Entity implements IPerson {
 	@field()
 	@prop({ required: true, trim: true })
 	lastname: string;
+
+	@Expose()
+	@field({ filterable: false })
+	@prop()
+	birthday?: Date;
 }
 
 const personModel = getModelForClass(Person);

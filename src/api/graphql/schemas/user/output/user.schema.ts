@@ -27,9 +27,6 @@ export default class UserGQL extends PersonGQL implements User {
 	picture!: FileGQL;
 
 	@Field()
-	birthday!: Date;
-
-	@Field()
 	enable!: boolean;
 
 	@Field()

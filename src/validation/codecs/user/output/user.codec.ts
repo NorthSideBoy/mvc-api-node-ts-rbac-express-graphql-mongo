@@ -1,5 +1,4 @@
 import z from "zod";
-import { dateSchema } from "../../../schemas/common.schemas";
 import {
 	emailSchema,
 	roleSchema,
@@ -14,7 +13,6 @@ export const userCodec = entityOutputCodec({
 	username: usernameSchema,
 	email: emailSchema,
 	picture: fileCodec,
-	birthday: dateSchema,
 	enable: z.boolean().default(true),
 	role: roleSchema,
 });

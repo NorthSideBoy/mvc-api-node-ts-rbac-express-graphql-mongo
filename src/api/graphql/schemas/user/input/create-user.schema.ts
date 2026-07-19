@@ -20,9 +20,6 @@ export default class CreateUserGQL
 	@Field()
 	email!: string;
 
-	@Field()
-	birthday!: Date;
-
 	@Field({ nullable: true })
 	enable?: boolean;
 }

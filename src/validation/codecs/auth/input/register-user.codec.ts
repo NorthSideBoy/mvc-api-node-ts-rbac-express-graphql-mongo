@@ -1,5 +1,4 @@
 import z from "zod";
-import { dateSchema } from "../../../schemas/common.schemas";
 import { imageSchema } from "../../../schemas/file.schemas";
 import {
 	emailSchema,
@@ -15,7 +14,6 @@ export const registerUserCodec = z
 		email: emailSchema,
 		picture: imageSchema.optional(),
 		password: passwordSchema,
-		birthday: dateSchema,
 		enable: z.boolean().default(true),
 	})
 	.strict();

@@ -57,10 +57,11 @@ export default class CreateUser extends BaseScript {
 			default: Role.ADMIN,
 		});
 
-		data.birthday = (await input({
-			message: "Enter user's birthday:",
-			validate: valid(dateSchema),
-		})) as DTO["birthday"];
+		const birthday = await input({
+			message: "Enter user's birthday (optional):",
+			validate: (value) => value === "" || valid(dateSchema)(value),
+		});
+		if (birthday) data.birthday = birthday;
 
 		const password1 = await password({
 			message: "Enter user's password:",

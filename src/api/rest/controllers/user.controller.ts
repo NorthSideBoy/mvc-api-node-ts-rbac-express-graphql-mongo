@@ -98,7 +98,7 @@ export class UserController extends BaseController {
 		@FormField() email: string,
 		@FormField() password: string,
 		@FormField() role: UpdateRole,
-		@FormField() birthday: Date,
+		@FormField() birthday?: Date,
 		@FormField() enable?: boolean,
 		@UploadedFile() upload?: Express.Multer.File,
 	): Promise<User> {

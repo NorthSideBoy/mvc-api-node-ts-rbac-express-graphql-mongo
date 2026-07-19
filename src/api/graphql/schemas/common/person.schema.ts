@@ -9,4 +9,7 @@ export default class PersonGQL implements Person {
 
 	@Field()
 	lastname!: string;
+
+	@Field({ nullable: true })
+	birthday?: Date;
 }
