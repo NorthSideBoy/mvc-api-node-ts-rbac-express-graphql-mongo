@@ -1,6 +1,6 @@
 {
 	"name": "mvc-api-node-ts-rbac-express-graphql-mongo",
-	"version": "1.5.0",
+	"version": "1.5.1",
 	"description": "RESTful API RBAC boilerplate with Node.js, Express, GraphQL, Socket.IO, TypeScript, TSOA, MongoDB and MVC pattern",
 	"type": "commonjs",
 	"main": "index.js",
