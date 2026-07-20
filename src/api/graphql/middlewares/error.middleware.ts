@@ -5,7 +5,14 @@ import {
 	isGraphQLError,
 	isZodError,
 } from "../../../guards/error.guard";
+import { isString } from "../../../guards/string.guard";
 import { logger } from "../../../utils/logger.util";
+
+const SAFE_GRAPHQL_ERROR_CODES = new Set([
+	"BAD_USER_INPUT",
+	"GRAPHQL_PARSE_FAILED",
+	"GRAPHQL_VALIDATION_FAILED",
+]);
 
 export const formatGraphQLError = (
 	_formatted: GraphQLFormattedError,
@@ -28,15 +35,18 @@ export const formatGraphQLError = (
 			};
 		}
 
-		return {
-			message: error.message,
-			code: isCoreError(error.originalError)
-				? error.originalError.code
-				: error?.extensions?.code || "GRAPHQL_ERROR",
-			metadata: isCoreError(error.originalError)
-				? error.originalError.metadata
-				: error.extensions?.metadata,
-		};
+		if (isCoreError(error.originalError)) {
+			return {
+				message: error.originalError.message,
+				code: error.originalError.code,
+				metadata: error.originalError.metadata,
+			};
+		}
+
+		const code = error.extensions?.code;
+		if (isString(code) && SAFE_GRAPHQL_ERROR_CODES.has(code)) {
+			return { message: error.message, code };
+		}
 	}
 
 	return {

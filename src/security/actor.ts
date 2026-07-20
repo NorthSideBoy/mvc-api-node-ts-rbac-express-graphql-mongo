@@ -1,6 +1,7 @@
 import { Kind } from "../enums/kind.enum";
 import type { Role } from "../enums/role.enum";
 import { type AppAbility, defineAbilityFor } from "../rbac";
+import type { Identity } from "../types/identity.type";
 import type { AccessClaims } from "./access-claims";
 
 type ActorAudit = {
@@ -36,31 +37,21 @@ export default abstract class BaseActor {
 
 export class UserActor extends BaseActor {
 	readonly kind = Kind.USER;
+	public issuedAt: number;
+	public expiresAt: number;
 
-	private constructor(
-		id: string,
-		username: string,
-		role: Role,
-		enable: boolean,
-		public readonly issuedAt: number,
-		public readonly expiresAt: number,
-	) {
-		super(id, role, username, enable);
+	private constructor(identity: Identity, claims: AccessClaims) {
+		super(identity.id, identity.role, identity.role, identity.enable);
+		this.issuedAt = claims.issuedAt;
+		this.expiresAt = claims.expiresAt;
 	}
 
-	static fromClaims(claims: AccessClaims): UserActor {
-		return new UserActor(
-			claims.subject,
-			claims.username,
-			claims.role,
-			claims.enable,
-			claims.issuedAt,
-			claims.expiresAt,
-		);
+	static fromIdentity(identity: Identity, claims: AccessClaims): UserActor {
+		return new UserActor(identity, claims);
 	}
 
 	isActive(): boolean {
-		const now = Date.now();
+		const now = Math.floor(Date.now() / 1000);
 		return this.enable && now >= this.issuedAt && now <= this.expiresAt;
 	}
 }

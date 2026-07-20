@@ -6,12 +6,10 @@ import { context } from "../src/utils/context.util";
 import { logger } from "../src/utils/logger.util";
 import type Script from "./base.script";
 import CreateUser from "./create-user.script";
-import Test from "./test.script";
 
 type ScriptFactory = () => Script;
 
 const scripts: Record<string, ScriptFactory> = {
-	test: () => new Test(),
 	"create-user": () => new CreateUser(),
 };
 

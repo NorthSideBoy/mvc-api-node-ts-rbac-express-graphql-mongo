@@ -7,6 +7,7 @@ export enum HttpErrorCode {
 	GatewayTimeout = "GATEWAY_TIMEOUT",
 	NotFound = "NOT_FOUND",
 	NotImplemented = "NOT_IMPLEMENTED",
+	PayloadTooLarge = "PAYLOAD_TOO_LARGE",
 	ServiceUnavailable = "SERVICE_UNAVAILABLE",
 	TooManyRequest = "TOO_MANY_REQUEST",
 	MethodNotAllowed = "METHOD_NOT_ALLOWED",

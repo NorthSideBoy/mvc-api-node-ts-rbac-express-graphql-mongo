@@ -1,26 +1,28 @@
 import type { Role } from "../../../enums/role.enum";
 import MethodNotAllowedError from "../../../errors/http/method-not-allowed.error";
 import UnauthorizedError from "../../../errors/http/unauthorized.error";
-import { isApplicationError, isHttpError } from "../../../guards/error.guard";
+import User from "../../../models/user.model";
 import { AccessClaims } from "../../../security/access-claims";
 import { AccessGrant } from "../../../security/access-grant";
+import { UserActor } from "../../../security/actor";
 import { tokenizer } from "../../../utils/tokenizer.util";
-
-type AuthStrategy = (
-	authHeader: string,
-	allowedRoles: ReadonlyArray<Role>,
-) => Promise<AccessGrant>;
+import type { AuthStrategy } from "../types/auth-strategy.type";
 
 const authStrategies = new Map<string, AuthStrategy>([
 	[
 		"Bearer",
 		async (authHeader, allowedRoles) => {
-			const token = extractBearerToken(authHeader);
-			if (!token) throw new UnauthorizedError("Invalid Bearer token format");
+			const [scheme, token] = authHeader.trim().split(/\s+/);
+			if (!token || scheme !== "Bearer")
+				throw new UnauthorizedError("Invalid Bearer token format");
 
 			const payload = tokenizer.verify(token);
 			const claims = AccessClaims.fromPayload(payload);
-			const grant = AccessGrant.issue(claims, allowedRoles);
+			const user = await User.findById(claims.subject);
+			if (!user)
+				throw new UnauthorizedError("Authentication subject not found");
+			const actor = UserActor.fromIdentity(user.identity, claims);
+			const grant = AccessGrant.issue(claims, actor, allowedRoles);
 
 			return grant;
 		},
@@ -32,24 +34,13 @@ export async function authorize(
 	securityName: string,
 	allowedRoles: ReadonlyArray<Role>,
 ): Promise<AccessGrant> {
-	try {
-		const strategy = authStrategies.get(securityName);
-		if (!strategy)
-			throw new MethodNotAllowedError(
-				`Authentication method '${securityName}' not allowed`,
-			);
-		if (!authorization)
-			throw new UnauthorizedError("Missing authorization headers");
+	const strategy = authStrategies.get(securityName);
+	if (!strategy)
+		throw new MethodNotAllowedError(
+			`Authentication method '${securityName}' not allowed`,
+		);
+	if (!authorization)
+		throw new UnauthorizedError("Missing authorization headers");
 
-		return await strategy(authorization, allowedRoles);
-	} catch (error) {
-		if (isHttpError(error) || isApplicationError(error)) throw error;
-
-		throw new UnauthorizedError("Authentication failed");
-	}
-}
-
-function extractBearerToken(authHeader: string): string | null {
-	const [scheme, token] = authHeader.trim().split(/\s+/);
-	return scheme === "Bearer" ? token || null : null;
+	return await strategy(authorization, allowedRoles);
 }

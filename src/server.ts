@@ -13,6 +13,10 @@ import { pinoHttp } from "pino-http";
 import { Server } from "socket.io";
 import swaggerUi from "swagger-ui-express";
 import { buildSchema } from "type-graphql";
+import {
+	payloadErrorMiddleware,
+	payloadLimit,
+} from "./api/common/middlewares/payload.middleware";
 import { formatGraphQLError } from "./api/graphql/middlewares/error.middleware";
 import AuthResolver from "./api/graphql/resolvers/auth.resolver";
 import CronJobResolver from "./api/graphql/resolvers/cron-job.resolver";
@@ -32,6 +36,7 @@ import { Role } from "./enums/role.enum";
 import { logger } from "./utils/logger.util";
 
 const app = express();
+const maxPayloadSize = config.server.maxPayloadSize;
 const server = createServer(app);
 const responseTimeoutMs = config.server.responseTimeout * 60 * 1000;
 
@@ -55,8 +60,6 @@ instrument(io, {
 	namespaceName: "/admin",
 });
 
-const maxFileSize = config.file.max_size * 1024 * 1024;
-
 app.use(
 	config.server.isProduction
 		? pinoHttp({ logger: logger.raw, level: config.server.logLevel })
@@ -67,8 +70,9 @@ app.use((_req, res, next) => {
 	res.setTimeout(responseTimeoutMs);
 	next();
 });
-app.use(express.json({ limit: maxFileSize }));
-app.use(express.urlencoded({ extended: true, limit: maxFileSize }));
+app.use(payloadLimit(maxPayloadSize));
+app.use(express.json({ limit: maxPayloadSize }));
+app.use(express.urlencoded({ extended: true, limit: maxPayloadSize }));
 app.use(generalLimiter);
 
 app.use("/public", express.static("storage/public"));
@@ -94,9 +98,10 @@ app.get("/swagger.json", (_request, response) => {
 });
 
 RegisterRoutes(app, {
-	multer: multer({ limits: { fileSize: maxFileSize } }),
+	multer: multer({
+		limits: { fileSize: maxPayloadSize, fieldSize: maxPayloadSize },
+	}),
 });
-app.use(errorMiddleware);
 
 const start = async () => {
 	await bootstrap();
@@ -130,13 +135,18 @@ const start = async () => {
 
 	app.use(
 		"/graphql",
-		graphqlUploadExpress({ maxFileSize }),
+		graphqlUploadExpress({
+			maxFileSize: maxPayloadSize,
+			maxFieldSize: maxPayloadSize,
+		}),
 		expressMiddleware(apollo, {
 			context: async ({ req, res }): Promise<GraphQLContext> => {
 				return { req, res };
 			},
 		}),
 	);
+	app.use(payloadErrorMiddleware);
+	app.use(errorMiddleware);
 	try {
 		await cronScheduler.initialize();
 		await new Promise<void>((resolve, reject) => {

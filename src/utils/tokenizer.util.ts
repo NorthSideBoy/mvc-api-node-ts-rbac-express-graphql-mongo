@@ -11,6 +11,7 @@ import { TokenBeforeError as AppTokenBeforeError } from "../errors/application/t
 import { TokenExpiredError as AppTokenExpiredError } from "../errors/application/token-expired.error";
 import { TokenTamperedError as AppTokenTamperedError } from "../errors/application/token-tampered.error";
 import type { Token } from "../types/token.type";
+import { tokenPayloadCodec } from "../validation/codecs/auth/common/token-payload.codec";
 
 class Tokenizer {
 	sign(payload: Token.Sign, options: SignOptions = {}): string {
@@ -23,7 +24,16 @@ class Tokenizer {
 
 	verify(token: string): Token.Payload {
 		try {
-			return verify(token, config.jwt.secret) as Token.Payload;
+			const payload = verify(token, config.jwt.secret);
+			const decoded = tokenPayloadCodec.safeParse(payload);
+			if (!decoded.success) {
+				throw new AppTokenTamperedError(
+					"Token payload is invalid",
+					decoded.error,
+				);
+			}
+
+			return decoded.data;
 		} catch (error) {
 			if (error instanceof JwtTokenExpiredError) {
 				throw new AppTokenExpiredError("Token expired", error, {

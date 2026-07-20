@@ -13,16 +13,15 @@ export class AccessGrant {
 
 	static issue(
 		claims: AccessClaims,
+		actor: UserActor,
 		allowedRoles: ReadonlyArray<Role>,
 	): AccessGrant {
-		if (!claims.isEnabled()) throw new UserDisabledError();
-		if (
-			!includedRoles(claims.role).some((role) => allowedRoles.includes(role))
-		) {
+		if (!actor.enable) throw new UserDisabledError();
+		if (!actor.role) throw new PermissionDeniedError();
+		if (!includedRoles(actor.role).some((role) => allowedRoles.includes(role)))
 			throw new PermissionDeniedError();
-		}
 
-		return new AccessGrant(claims, claims.actor);
+		return new AccessGrant(claims, actor);
 	}
 
 	get actor(): UserActor {

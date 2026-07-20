@@ -11,6 +11,7 @@ import { Types } from "mongoose";
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import { Role } from "../enums/role.enum";
 import { field } from "../plugins/paginate-query.plugin";
+import type { Identity } from "../types/identity.type";
 import type { Token } from "../types/token.type";
 import { hasher } from "../utils/hasher.util";
 import { mapper } from "../utils/mapper.util";
@@ -59,12 +60,18 @@ export class User extends Person {
 		return mapper.toDto(User, this, userCodec);
 	}
 
-	public get sign(): Token.Sign {
+	public get identity(): Identity {
 		return {
-			sub: this.id,
+			id: this.id,
 			username: this.username,
 			role: this.role,
 			enable: this.enable,
+		};
+	}
+
+	public get sign(): Token.Sign {
+		return {
+			sub: this.id,
 		};
 	}
 

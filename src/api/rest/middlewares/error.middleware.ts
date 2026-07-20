@@ -17,6 +17,8 @@ export const errorMiddleware: ErrorRequestHandler = (
 	response,
 	next,
 ) => {
+	if (response.headersSent) return next(error);
+
 	if (isZodError(error)) {
 		logger.error({ error }, "[HTTP] validation error");
 		const message = error.issues

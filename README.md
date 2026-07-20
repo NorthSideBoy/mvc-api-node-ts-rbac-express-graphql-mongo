@@ -245,7 +245,7 @@ The application validates environment variables on boot (Zod). Copy `.env.exampl
 | `CORS_ORIGIN` | CORS allowed origins for HTTP + Socket.IO | `*` |
 | `RATE_LIMIT_WINDOW` | Rate limit window (minutes) | `15` |
 | `RATE_LIMIT_MAX` | Max requests per window | `500` |
-| `MAX_FILE_SIZE` | Max request/upload size (MB) | `5` |
+| `MAX_PAYLOAD_SIZE` | Maximum total HTTP request payload size (MiB) | `8` |
 
 If `DB_URI` is omitted or left empty, the app constructs the final URI from `DB_USER`, `DB_PASSWORD`, `DB_HOST`, `DB_PORT`, `DB_NAME`, and `DB_AUTH_SOURCE`.
 
@@ -264,7 +264,6 @@ Main npm scripts (from `package.json`):
 - `npm run lint`: lints (and writes fixes) with Biome.
 - `npm run check`: runs Biome checks and writes fixes.
 - `npm run check:unsafe`: runs Biome checks, including unsafe fixes, and writes them.
-- `npm run script -- test`: runs the bundled hello-world script.
 - `npm run clean`: removes build output and generated tsoa artifacts (`dist/`, `src/api/rest/routes/routes.ts`, `src/api/rest/docs/swagger.json`).
 
 > `postinstall`, `predev`, and `prebuild` run `tsoa spec-and-routes` automatically. `prestart` runs `npm run build`.
@@ -337,6 +336,8 @@ This project exposes file uploads in `REST` and `GraphQL` interfaces, backed by 
 - GraphQL operations with uploads: `register`, `create`, `updatePicture`
 - In GraphQL, uploads use the `Upload` scalar (via `graphql-upload`)
 - In REST, auth register, user create, and picture updates receive the multipart field `upload`.
+- `MAX_PAYLOAD_SIZE` limits the complete HTTP request body across REST and GraphQL, including multipart fields, files, metadata, and boundaries.
+- File-specific limits remain application rules enforced by Zod (`FILE_SIZE_LIMITS`); they are independent from the HTTP transport limit.
 - Files are stored in `storage/`. `storage/public/...` is served from `GET /public/...`, while `storage/private/...` is served from `GET /private/...` (requires `ADMIN` Bearer auth).
 - API responses include file metadata with a computed `url` (e.g., `user.picture.url`).
 

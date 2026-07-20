@@ -4,6 +4,8 @@ import z from "zod";
 
 dotenv.config({ quiet: true });
 
+const BYTES_PER_MIB = 1024 * 1024;
+
 const optionalString = () =>
 	z.preprocess(
 		(value) =>
@@ -56,8 +58,8 @@ const envSchema = z
 		RATE_LIMIT_WINDOW: z.coerce.number().int().positive().default(15),
 		RATE_LIMIT_MAX: z.coerce.number().int().positive().default(500),
 
-		// File
-		MAX_FILE_SIZE: z.coerce.number().int().positive().default(5),
+		// HTTP payload
+		MAX_PAYLOAD_SIZE: z.coerce.number().int().positive().default(8),
 	})
 	.superRefine((env, ctx) => {
 		if (env.NODE_ENV === "production" && !env.DOMAIN) {
@@ -163,6 +165,7 @@ export const config = Object.freeze({
 		logLevel,
 		publicUrl: buildPublicUrl(),
 		responseTimeout: env.RESPONSE_TIMEOUT,
+		maxPayloadSize: env.MAX_PAYLOAD_SIZE * BYTES_PER_MIB,
 		isProduction,
 		isDevelopment: !isProduction,
 	},
@@ -192,9 +195,6 @@ export const config = Object.freeze({
 	rateLimit: {
 		windowMs: env.RATE_LIMIT_WINDOW,
 		max: env.RATE_LIMIT_MAX,
-	},
-	file: {
-		max_size: env.MAX_FILE_SIZE,
 	},
 } as const);
 

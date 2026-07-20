@@ -1,11 +1,7 @@
-import type { Role } from "../enums/role.enum";
 import type { Token } from "./token.type";
 export namespace Access {
 	export interface Claims {
 		subject: string;
-		username: string;
-		role: Role;
-		enable: boolean;
 		issuedAt: number;
 		expiresAt: number;
 		raw: Token.Payload;

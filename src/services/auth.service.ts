@@ -4,20 +4,20 @@ import type { AuthenticatedUser } from "../DTOs/auth/output/authenticated-user.d
 import type { User as DTO } from "../DTOs/user/output/user.dto";
 import { InvalidUserCredentialsError } from "../errors/application/invalid-user-credentials.error";
 import { EVENTS } from "../events/constants/events.constants";
-import UserHelper from "../helpers/user.helper";
 import User from "../models/user.model";
 import { tokenizer } from "../utils/tokenizer.util";
 import { decode } from "../utils/validator.util";
 //import { loginUserCodec } from "../validation/codecs/auth/input/login-user.codec";
 import { registerUserCodec } from "../validation/codecs/auth/input/register-user.codec";
 import BaseService from "./base.service";
+import UserService from "./user.service";
 
 type AuthEventMetadata = {
 	ip: string;
 };
 
 export default class AuthService extends BaseService {
-	private readonly userHelper = new UserHelper();
+	private readonly userService = new UserService(this.ctx);
 
 	private toAuthenticated(user: DTO, token: string): AuthenticatedUser {
 		return { ...user, token };
@@ -28,7 +28,7 @@ export default class AuthService extends BaseService {
 		metadata: AuthEventMetadata,
 	): Promise<AuthenticatedUser> {
 		const decoded = decode(registerUserCodec, input);
-		const user = await this.userHelper.create(decoded);
+		const user = await this.userService.register(decoded);
 		const token = tokenizer.sign(user.sign);
 		this.emit(EVENTS.AUTH.ACCOUNT_REGISTERED, {
 			id: user.id,

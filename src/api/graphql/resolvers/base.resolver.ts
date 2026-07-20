@@ -2,6 +2,7 @@ import type { Readable } from "node:stream";
 import type { FileUpload } from "graphql-upload/processRequest.mjs";
 import { lookup } from "mime-types";
 import { createFile } from "../../../factories/file.factory";
+import { normalizePayloadError } from "../../common/middlewares/payload.middleware";
 
 export default class BaseResolver {
 	private async streamToBuffer(stream: Readable): Promise<Buffer> {
@@ -21,13 +22,17 @@ export default class BaseResolver {
 		upload?: Promise<FileUpload>,
 	): Promise<File | undefined> {
 		if (!upload) return undefined;
-		const fileUpload = await upload;
-		const stream = fileUpload.createReadStream();
-		const buffer = await this.streamToBuffer(stream);
-		const mimetype = lookup(fileUpload.filename) || fileUpload.mimetype;
+		try {
+			const fileUpload = await upload;
+			const stream = fileUpload.createReadStream();
+			const buffer = await this.streamToBuffer(stream);
+			const mimetype = lookup(fileUpload.filename) || fileUpload.mimetype;
 
-		return createFile(buffer, fileUpload.filename, {
-			type: mimetype,
-		});
+			return createFile(buffer, fileUpload.filename, {
+				type: mimetype,
+			});
+		} catch (error) {
+			throw normalizePayloadError(error);
+		}
 	}
 }
